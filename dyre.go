@@ -39,19 +39,21 @@ type DyRe_Validated struct {
 }
 
 type DyRe_Request struct {
-	name        string
-	requestType string
-	fields      map[string]DyRe_Field
-	fieldNames  []string
-	groups      map[string]DyRe_Group
-	groupNames  []string
-	sql         DyRe_SQL
+	name            string
+	requestType     string
+	fields          map[string]DyRe_Field
+	fieldNames      []string
+	groups          map[string]DyRe_Group
+	groupNames      []string
+	groupFieldNames []string
+	sql             DyRe_SQL
 }
 
 // TODO: Sub request into sql file
 
 // Validates incoming fields and groups.
 // Returns a validated struct for making sql queries.
+// if group is found dont check fields for group field match to avoid duplication
 func (re *DyRe_Request) ValidateRequest(fields []string, groups []string) (DyRe_Validated, error) {
 	var selected DyRe_Validated
 	for _, re_field := range re.fields {
@@ -62,6 +64,7 @@ func (re *DyRe_Request) ValidateRequest(fields []string, groups []string) (DyRe_
 			selected._sqlTypes = append(selected._sqlTypes, re_field.typeName)
 		}
 	}
+
 	for _, re_group := range re.groups {
 		if re_group.required == true || contains(groups, re_group.name) {
 			selected._groups = append(selected._groups, re_group)
@@ -69,6 +72,15 @@ func (re *DyRe_Request) ValidateRequest(fields []string, groups []string) (DyRe_
 				selected._sqlFields = append(selected._sqlFields, re_gfield.sqlSelect)
 				selected._headers = append(selected._headers, re_gfield.name)
 				selected._sqlTypes = append(selected._sqlTypes, re_gfield.typeName)
+			}
+		} else {
+			for _, re_groupField := range re_group.fields {
+				if contains(fields, re_groupField.name) {
+					selected._fields = append(selected._fields, re_groupField)
+					selected._sqlFields = append(selected._sqlFields, re_groupField.sqlSelect)
+					selected._headers = append(selected._headers, re_groupField.name)
+					selected._sqlTypes = append(selected._sqlTypes, re_groupField.typeName)
+				}
 			}
 		}
 	}

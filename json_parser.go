@@ -95,8 +95,16 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 			groupList = append(groupList, group.name)
 		}
 
+		groupFieldList := []string{}
+		for _, group := range dy_request.groups {
+			for _, field := range group.fields {
+				groupFieldList = append(groupFieldList, field.name)
+			}
+		}
+
 		dy_request.fieldNames = fieldList
 		dy_request.groupNames = groupList
+		dy_request.groupFieldNames = groupFieldList
 
 		requests[dy_request.name] = dy_request
 	}
