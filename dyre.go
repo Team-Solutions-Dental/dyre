@@ -180,6 +180,10 @@ func (field *DyRe_Field) SQLSelect() string {
 	return field.sqlSelect
 }
 
+func (field *DyRe_Field) Type() string {
+	return field.typeName
+}
+
 func (group *DyRe_Group) Name() string {
 	return group.name
 }

@@ -10,6 +10,7 @@ if ! go test .; then
     exit 1
 fi
 
+
 git push origin $version
 
 GOPROXY=proxy.golang.org go list -m github.com/vamuscari/dyre@$version
