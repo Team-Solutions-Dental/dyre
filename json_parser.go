@@ -162,6 +162,17 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				new_field.required = false
 			}
 
+			if typeName, ok := field_map["type"]; ok {
+				if typeNameString, ok := typeName.(string); ok {
+					new_field.typeName = typeNameString
+				} else {
+					log.Printf("Type <typeName> not string on field %s\n", new_field.name)
+					new_field.typeName = DefaultType
+				}
+			} else {
+				new_field.typeName = DefaultType
+			}
+
 			if querySelect, ok := field_map["sqlSelect"]; ok {
 				if querySelectString, ok := querySelect.(string); ok {
 					new_field.sqlSelect = querySelectString
@@ -173,7 +184,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				new_field.sqlSelect = new_field.name
 			}
 
-			expected_keys := []string{"name", "required", "sqlSelect"}
+			expected_keys := []string{"name", "required", "type", "sqlSelect"}
 			for i := range field_map {
 				if !contains(expected_keys, i) {
 					fmt.Printf("WARN: Unexpected Key %s on Field %s\n", i, new_field.name)
