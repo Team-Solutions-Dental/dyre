@@ -1,6 +1,7 @@
 package dyre
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"maps"
@@ -47,6 +48,35 @@ type DyRe_Request struct {
 	groupNames      []string
 	groupFieldNames []string
 	sql             DyRe_SQL
+}
+
+var DefaultType = "sql.NullString"
+var Types = map[string]interface{}{
+	"string":          string(""),
+	"int":             int(0),
+	"int8":            int8(0),
+	"int16":           int16(0),
+	"int32":           int32(0),
+	"int64":           int64(0),
+	"uint":            uint(0),
+	"uint8":           uint8(0), // byte
+	"uint16":          uint16(0),
+	"uint32":          uint32(0),
+	"uint64":          uint64(0),
+	"uintptr":         uintptr(0), // rune
+	"bool":            bool(false),
+	"float32":         float32(0),
+	"float64":         float64(0),
+	"complex64":       complex64(0),
+	"complex128":      complex128(0),
+	"sql.NullString":  sql.NullString{},
+	"sql.NullBool":    sql.NullBool{},
+	"sql.NullByte":    sql.NullByte{},
+	"sql.NullTime":    sql.NullTime{},
+	"sql.NullInt16":   sql.NullInt16{},
+	"sql.NullInt32":   sql.NullInt32{},
+	"sql.NullInt64":   sql.NullInt64{},
+	"sql.NullFloat64": sql.NullFloat64{},
 }
 
 // TODO: Sub request into sql file
