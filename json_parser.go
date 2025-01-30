@@ -66,12 +66,12 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 		}
 
 		if fields, ok := js_request["fields"]; ok {
-			dy_request.fields = parseDryeJSONFields(fields.([]interface{}))
+			dy_request.fields = parseDryeJSONFields(fields.([]interface{}), dy_request.name)
 		}
 
 		if groups, ok := js_request["groups"]; ok {
 			if groupsMap, ok := groups.([]interface{}); ok {
-				dy_request.groups = parseDryeJSONGroups(groupsMap)
+				dy_request.groups = parseDryeJSONGroups(groupsMap, dy_request.name)
 			} else {
 				log.Printf("Field <groups> should be an array of objects on request  %s\nGivenType: %s", dy_request.name, reflect.TypeOf(groupsMap).String())
 			}
@@ -117,7 +117,7 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 // map [ name of field ] Dyre_Field.
 // map is used for faster lookup times in large arrays
 // TODO: check jsonMap to make sure field exists
-func parseDryeJSONFields(a []any) map[string]DyRe_Field {
+func parseDryeJSONFields(a []any, req string) map[string]DyRe_Field {
 
 	dyre_fields := map[string]DyRe_Field{}
 
@@ -126,6 +126,12 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 		field_type := reflect.TypeOf(v).String()
 
 		if field_type == "string" {
+			_, check := dyre_fields[v.(string)]
+			if check {
+				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s'\n", req, v.(string))
+				continue
+			}
+
 			dyre_fields[v.(string)] = DyRe_Field{
 				name:      v.(string),
 				required:  false,
@@ -143,11 +149,17 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				if nameString, ok := name.(string); ok {
 					new_field.name = nameString
 				} else {
-					log.Printf("Type <name> not string: %v,\n", name)
+					log.Printf("ERROR: Request %s, Type <name> not string: %v,\n", req, name)
 					continue
 				}
 			} else {
-				log.Printf("<name> not found: %v,\n", name)
+				log.Printf("ERROR: Request %s, <name> not found: %v,\n", req, name)
+				continue
+			}
+
+			_, check := dyre_fields[new_field.name]
+			if check {
+				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s' \n", req, v.(string))
 				continue
 			}
 
@@ -155,7 +167,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				if requiredBool, ok := required.(bool); ok {
 					new_field.required = requiredBool
 				} else {
-					log.Printf("Type <required> not bool on field %s\n", new_field.name)
+					log.Printf("ERROR: Request %s, Type <required> not bool on field %s\n", req, new_field.name)
 					new_field.required = false
 				}
 			} else {
@@ -166,7 +178,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				if typeNameString, ok := typeName.(string); ok {
 					new_field.typeName = typeNameString
 				} else {
-					log.Printf("Type <typeName> not string on field %s\n", new_field.name)
+					log.Printf("ERROR: Request %s, Type <typeName> not string on field %s\n", req, new_field.name)
 					new_field.typeName = DefaultType
 				}
 			} else {
@@ -177,7 +189,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 				if querySelectString, ok := querySelect.(string); ok {
 					new_field.sqlSelect = querySelectString
 				} else {
-					log.Printf("Type <querySelect> not string on field %s\n", new_field.name)
+					log.Printf("ERROR: Request %s, Type <querySelect> not string on field %s\n", req, new_field.name)
 					new_field.sqlSelect = new_field.name
 				}
 			} else {
@@ -187,7 +199,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 			expected_keys := []string{"name", "required", "type", "sqlSelect"}
 			for i := range field_map {
 				if !contains(expected_keys, i) {
-					fmt.Printf("WARN: Unexpected Key %s on Field %s\n", i, new_field.name)
+					fmt.Printf("WARN: Request %s, Unexpected Key %s on Field %s\n", req, i, new_field.name)
 				}
 			}
 
@@ -210,7 +222,7 @@ func parseDryeJSONFields(a []any) map[string]DyRe_Field {
 //	    "field6"
 //	  ]
 //	},
-func parseDryeJSONGroups(a []interface{}) map[string]DyRe_Group {
+func parseDryeJSONGroups(a []interface{}, req string) map[string]DyRe_Group {
 	dyre_groups := map[string]DyRe_Group{}
 	for _, v := range a {
 		if _, ok := v.(map[string]interface{}); !ok {
@@ -239,7 +251,7 @@ func parseDryeJSONGroups(a []interface{}) map[string]DyRe_Group {
 		}
 
 		if group_fields, ok := group["fields"]; ok {
-			new_group.fields = parseDryeJSONFields(group_fields.([]interface{}))
+			new_group.fields = parseDryeJSONFields(group_fields.([]interface{}), req)
 		} else {
 			continue
 		}
