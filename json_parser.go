@@ -159,7 +159,7 @@ func parseDryeJSONFields(a []any, req string) map[string]DyRe_Field {
 
 			_, check := dyre_fields[new_field.name]
 			if check {
-				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s' \n", req, v.(string))
+				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s' \n", req, new_field.name)
 				continue
 			}
 
@@ -236,11 +236,17 @@ func parseDryeJSONGroups(a []interface{}, req string) map[string]DyRe_Group {
 			if nameString, ok := name.(string); ok {
 				new_group.name = nameString
 			} else {
-				log.Printf("Type group <name> not string: %v,\n", name)
+				log.Printf("ERROR: Request %s, Type group <name> not string: %v,\n", req, name)
 				continue
 			}
 		} else {
-			log.Printf("Field <name> does not exit on group\n")
+			log.Printf("ERROR: Request %s, Field <name> does not exit on group\n", req)
+			continue
+		}
+
+		_, check := dyre_groups[new_group.name]
+		if check {
+			fmt.Printf("WARN: Request {%s}, Duplicate group '%s' \n", req, new_group.name)
 			continue
 		}
 
@@ -259,7 +265,7 @@ func parseDryeJSONGroups(a []interface{}, req string) map[string]DyRe_Group {
 		expected_keys := []string{"name", "fields", "required"}
 		for i := range group {
 			if !contains(expected_keys, i) {
-				fmt.Printf("WARN: Unexpected Key %s on Group %s\n", i, new_group.name)
+				fmt.Printf("WARN: Request %s, Unexpected Key %s on Group %s\n", req, i, new_group.name)
 			}
 		}
 
