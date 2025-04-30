@@ -1,16 +1,18 @@
 package parser
 
 import (
-	"dyre/ast"
-	"dyre/lexer"
-	"dyre/token"
 	"fmt"
 	"strconv"
+
+	"github.com/vamuscari/dyre/ast"
+	"github.com/vamuscari/dyre/lexer"
+	"github.com/vamuscari/dyre/token"
 )
 
 const (
 	_ int = iota
 	LOWEST
+	EVALUATE    // :
 	EQUALS      // ==
 	LESSGREATER // > or <
 	SUM         // +
@@ -20,6 +22,7 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+	token.COLON:    EVALUATE,
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
 	token.LT:       LESSGREATER,
@@ -62,7 +65,6 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
-	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -83,45 +85,38 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
-	program := &ast.Program{}
-	program.Statements = []ast.Statement{}
+func (p *Parser) ParseQuery() *ast.Query {
+	query := &ast.Query{}
+	query.Statements = []ast.Statement{}
 
 	for p.curToken.Type != token.EOF {
-		stmt := p.parseStatement()
-		if stmt != nil {
-			program.Statements = append(program.Statements, stmt)
+		col := p.parseStatement()
+		if col != nil {
+			query.Statements = append(query.Statements, col)
 		}
 		p.nextToken()
 	}
-	return program
-}
-
-func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	return query
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	switch p.curToken.Type {
-	case token.LET:
-		return p.parseLetStatement()
-	case token.RETURN:
-		return p.parseReturnStatement()
-	default:
+	if p.curToken.Type == token.IDENT && p.peekToken.Type == token.COLON {
+		return p.parseColumnStatement()
+	} else {
 		return p.parseExpressionStatement()
 	}
 }
 
-func (p *Parser) parseLetStatement() *ast.LetStatement {
-	stmt := &ast.LetStatement{Token: p.curToken}
+func (p *Parser) parseColumnStatement() ast.Statement {
+	stmt := &ast.ColumnStatement{Token: p.curToken}
 
-	if !p.expectPeek(token.IDENT) {
+	if !p.curTokenIs(token.IDENT) {
 		return nil
 	}
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
-	if !p.expectPeek(token.ASSIGN) {
+	if !p.expectPeek(token.COLON) {
 		return nil
 	}
 
@@ -136,17 +131,8 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
-func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
-	stmt := &ast.ReturnStatement{Token: p.curToken}
-	p.nextToken()
-
-	stmt.ReturnValue = p.parseExpression(LOWEST)
-
-	for !p.curTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
-
-	return stmt
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
 
 func (p *Parser) parseExpressionStatement() ast.Statement {
@@ -154,7 +140,7 @@ func (p *Parser) parseExpressionStatement() ast.Statement {
 
 	stmt.Expression = p.parseExpression(LOWEST)
 
-	if p.peekTokenIs(token.SEMICOLON) {
+	if p.peekTokenIs(token.COMMA) {
 		p.nextToken()
 	}
 
@@ -351,25 +337,6 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 		p.nextToken()
 	}
 	return block
-}
-
-// fn <parameters> <block statement>
-func (p *Parser) parseFunctionLiteral() ast.Expression {
-	lit := &ast.FunctionLiteral{Token: p.curToken}
-
-	if !p.expectPeek(token.LPAREN) {
-		return nil
-	}
-
-	lit.Parameters = p.parseFunctionParameters()
-
-	if !p.expectPeek(token.LBRACE) {
-		return nil
-	}
-
-	lit.Body = p.parseBlockStatement()
-
-	return lit
 }
 
 // (<parameter one>,<parameter two>,<parameter three>,...)

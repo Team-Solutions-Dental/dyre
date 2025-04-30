@@ -58,7 +58,7 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 			name: js_request["name"].(string),
 		}
 
-		expected_keys := []string{"name", "fields", "groups", "tableName"}
+		expected_keys := []string{"name", "fields", "tableName"}
 		for i := range js_request {
 			if !contains(expected_keys, i) {
 				fmt.Printf("WARN: Unexpected Key %s on Request %s\n", i, dy_request.name)
@@ -69,16 +69,7 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 			dy_request.fields = parseDryeJSONFields(fields.([]interface{}), dy_request.name)
 		}
 
-		if groups, ok := js_request["groups"]; ok {
-			if groupsMap, ok := groups.([]interface{}); ok {
-				dy_request.groups = parseDryeJSONGroups(groupsMap, dy_request.name)
-			} else {
-				log.Printf("Field <groups> should be an array of objects on request  %s\nGivenType: %s", dy_request.name, reflect.TypeOf(groupsMap).String())
-			}
-
-		}
-
-		if dy_request.fields == nil && dy_request.groups == nil {
+		if dy_request.fields == nil {
 			return nil, errors.New(fmt.Sprintf("No field <fields> on request  %s\n", dy_request.name))
 		}
 
@@ -90,21 +81,8 @@ func parseDyreJSON(m []map[string]interface{}) (map[string]DyRe_Request, error) 
 		for _, field := range dy_request.fields {
 			fieldList = append(fieldList, field.name)
 		}
-		groupList := []string{}
-		for _, group := range dy_request.groups {
-			groupList = append(groupList, group.name)
-		}
-
-		groupFieldList := []string{}
-		for _, group := range dy_request.groups {
-			for _, field := range group.fields {
-				groupFieldList = append(groupFieldList, field.name)
-			}
-		}
 
 		dy_request.fieldNames = fieldList
-		dy_request.groupNames = groupList
-		dy_request.groupFieldNames = groupFieldList
 
 		requests[dy_request.name] = dy_request
 	}
@@ -208,71 +186,6 @@ func parseDryeJSONFields(a []any, req string) map[string]DyRe_Field {
 	}
 
 	return dyre_fields
-}
-
-// look for defined group.
-// infer infer group from json map if only name is given.
-// not sure I want to "fill in the blank" on the map type
-// If someone doesnt put all of the fields in on the map type is should not infer. This could lead to confusion otherwise
-//
-//	{
-//	  "name": "group1",
-//	  "fields": [
-//	    "field5",
-//	    "field6"
-//	  ]
-//	},
-func parseDryeJSONGroups(a []interface{}, req string) map[string]DyRe_Group {
-	dyre_groups := map[string]DyRe_Group{}
-	for _, v := range a {
-		if _, ok := v.(map[string]interface{}); !ok {
-			log.Printf("A dyre group must be a Object:\n%v", v)
-			continue
-		}
-		group := v.(map[string]interface{})
-		new_group := DyRe_Group{}
-
-		if name, ok := group["name"]; ok {
-			if nameString, ok := name.(string); ok {
-				new_group.name = nameString
-			} else {
-				log.Printf("ERROR: Request %s, Type group <name> not string: %v,\n", req, name)
-				continue
-			}
-		} else {
-			log.Printf("ERROR: Request %s, Field <name> does not exit on group\n", req)
-			continue
-		}
-
-		_, check := dyre_groups[new_group.name]
-		if check {
-			fmt.Printf("WARN: Request {%s}, Duplicate group '%s' \n", req, new_group.name)
-			continue
-		}
-
-		if group_required, ok := group["required"]; ok {
-			new_group.required = group_required.(bool)
-		} else {
-			new_group.required = false
-		}
-
-		if group_fields, ok := group["fields"]; ok {
-			new_group.fields = parseDryeJSONFields(group_fields.([]interface{}), req)
-		} else {
-			continue
-		}
-
-		expected_keys := []string{"name", "fields", "required"}
-		for i := range group {
-			if !contains(expected_keys, i) {
-				fmt.Printf("WARN: Request %s, Unexpected Key %s on Group %s\n", req, i, new_group.name)
-			}
-		}
-
-		dyre_groups[new_group.name] = new_group
-	}
-
-	return dyre_groups
 }
 
 func getMapKeys(m map[string]any) []string {

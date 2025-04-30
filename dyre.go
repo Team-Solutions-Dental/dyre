@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+
+	"github.com/vamuscari/dyre/ast"
+	"github.com/vamuscari/dyre/lexer"
+	"github.com/vamuscari/dyre/parser"
 )
 
 // TODO: sql tools
@@ -12,42 +16,29 @@ import (
 type DyRe_Field struct {
 	name      string
 	typeName  string
-	required  bool
+	sqlType   string
+	defaultField bool
 	sqlSelect string
 	tag       map[string]string
 }
 
-type DyRe_Group struct {
-	_request *DyRe_Request
-	name     string
-	required bool
-	fields   map[string]DyRe_Field
-}
-
-type DyRe_SQL struct {
-	_request  *DyRe_Request
-	tableName string
-	sqlFile   string
-}
-
-type DyRe_Validated struct {
+type DyRe_Constructor struct {
 	_request   *DyRe_Request
+	_ast       *ast.Query
 	_headers   []string
 	_sqlFields []string
 	_sqlTypes  []string
 	_fields    []DyRe_Field
-	_groups    []DyRe_Group
+	_tableName string
+	_limit     int
 }
 
 type DyRe_Request struct {
-	name            string
-	requestType     string
-	fields          map[string]DyRe_Field
-	fieldNames      []string
-	groups          map[string]DyRe_Group
-	groupNames      []string
-	groupFieldNames []string
-	sql             DyRe_SQL
+	name        string
+	requestType string
+	fields      map[string]DyRe_Field
+	fieldNames  []string
+	tableName   string
 }
 
 var DefaultType = "sql.NullString"
@@ -79,13 +70,41 @@ var Types = map[string]interface{}{
 	"sql.NullFloat64": sql.NullFloat64{},
 }
 
-// TODO: Sub request into sql file
+// TODO:
+// Parse Query parameters into ast and assign to corresponding fields for building request.
+func (re *DyRe_Request) ParseQuery(query string) (DyRe_Constructor, error) {
+	var constructor DyRe_Constructor
+
+	tokens := lexer.New(query)
+	q := parser.New(tokens)
+	ast := q.ParseQuery()
+	if len(q.Errors()) > 0 {
+		return constructor, errors.New("Parser Error")
+	}
+
+	constructor._ast = ast
+
+	// TODO: return default fields
+	// construct statement?
+	if len(ast.Statements) == 0 {
+
+	}
+
+	// eval
+	for _, stmt := range ast.Statements {
+		if stmt.TokenLiteral
+		
+
+	}
+
+	return constructor, nil
+}
 
 // Validates incoming fields and groups.
 // Returns a validated struct for making sql queries.
 // if group is found dont check fields for group field match to avoid duplication
-func (re *DyRe_Request) ValidateRequest(fields []string, groups []string) (DyRe_Validated, error) {
-	var selected DyRe_Validated
+func (re *DyRe_Request) ValidateRequest(fields []string) (DyRe_Constructor, error) {
+	var selected DyRe_Constructor
 	for _, re_field := range re.fields {
 		if re_field.required == true || contains(fields, re_field.name) {
 			selected._fields = append(selected._fields, re_field)
@@ -95,27 +114,7 @@ func (re *DyRe_Request) ValidateRequest(fields []string, groups []string) (DyRe_
 		}
 	}
 
-	for _, re_group := range re.groups {
-		if re_group.required == true || contains(groups, re_group.name) {
-			selected._groups = append(selected._groups, re_group)
-			for _, re_gfield := range re_group.fields {
-				selected._sqlFields = append(selected._sqlFields, re_gfield.sqlSelect)
-				selected._headers = append(selected._headers, re_gfield.name)
-				selected._sqlTypes = append(selected._sqlTypes, re_gfield.typeName)
-			}
-		} else {
-			for _, re_groupField := range re_group.fields {
-				if contains(fields, re_groupField.name) {
-					selected._fields = append(selected._fields, re_groupField)
-					selected._sqlFields = append(selected._sqlFields, re_groupField.sqlSelect)
-					selected._headers = append(selected._headers, re_groupField.name)
-					selected._sqlTypes = append(selected._sqlTypes, re_groupField.typeName)
-				}
-			}
-		}
-	}
-
-	if len(selected._fields) == 0 && len(selected._groups) == 0 {
+	if len(selected._fields) == 0 {
 		return selected, errors.New(fmt.Sprintf("No valid fields or groups selected for %s", re.name))
 	}
 
@@ -128,44 +127,39 @@ func (re *DyRe_Request) FieldNames() []string {
 	return re.fieldNames
 }
 
-func (re *DyRe_Request) GroupNames() []string {
-	return re.groupNames
-}
-
-// Fields for SQL Select.
-//
-// SELECT  {Fields} FROM {Table}
-func (valid *DyRe_Validated) SQLFields() []string {
-	sqlFields := []string{}
-	for _, v := range valid._sqlFields {
-		sqlFields = append(sqlFields, v)
-	}
-	return sqlFields
-}
-
-// Returns the list of names for the fields that were calles
-func (valid *DyRe_Validated) Headers() []string {
-	headers := []string{}
-	for _, v := range valid._headers {
-		headers = append(headers, v)
-	}
-	return headers
-}
-
 func (re *DyRe_Request) TableName() string {
-	return re.sql.tableName
-}
-
-func (re *DyRe_Request) SQLFile() string {
-	return re.sql.sqlFile
+	return re.tableName
 }
 
 func (re *DyRe_Request) Fields() map[string]DyRe_Field {
 	return maps.Clone(re.fields)
 }
 
-func (re *DyRe_Request) Groups() map[string]DyRe_Group {
-	return maps.Clone(re.groups)
+// Returns the list of names for the fields that were calles
+func (con *DyRe_Constructor) Headers() []string {
+	headers := []string{}
+	for _, v := range con._headers {
+		headers = append(headers, v)
+	}
+	return headers
+}
+
+// Fields for SQL Select.
+//
+// SELECT  {Fields} FROM {Table}
+func (con *DyRe_Constructor) SQLFields() []string {
+	sqlFields := []string{}
+	for _, v := range con._sqlFields {
+		sqlFields = append(sqlFields, v)
+	}
+	return sqlFields
+}
+
+func (con *DyRe_Constructor) ConstructStatement() string {
+	SELECT
+	FROM
+	WHERE
+
 }
 
 func (field *DyRe_Field) Name() string {
@@ -182,18 +176,6 @@ func (field *DyRe_Field) SQLSelect() string {
 
 func (field *DyRe_Field) Type() string {
 	return field.typeName
-}
-
-func (group *DyRe_Group) Name() string {
-	return group.name
-}
-
-func (group *DyRe_Group) Required() bool {
-	return group.required
-}
-
-func (group *DyRe_Group) Fields() map[string]DyRe_Field {
-	return maps.Clone(group.fields)
 }
 
 func contains(a []string, l string) bool {

@@ -12,6 +12,7 @@ const (
 
 	IDENT = "IDENT"
 	INT   = "INT"
+	// COLUMN = "COLUMN" Has IDENT AND COLON
 
 	// Operations
 	ASSIGN   = "="
@@ -27,7 +28,8 @@ const (
 	GT = ">"
 
 	COMMA     = ","
-	SEMICOLON = ","
+	SEMICOLON = ";"
+	COLON     = ":"
 
 	LPAREN = "("
 	RPAREN = ")"

@@ -10,7 +10,7 @@ Example API request
 
 ## Setting up JSON config
 
-First you will need json file to build with.
+First you will need JSON file to build with.
 The name of the request is the thing being called.
 Fields can be a string or an object with multiple params. 
 If a type is not declared make sure to setup a default type that works for you. 
