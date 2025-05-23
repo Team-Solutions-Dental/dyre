@@ -14,9 +14,10 @@ func TestColumnStatements(t *testing.T) {
 		expectedIdentifier string
 		expectedValue      interface{}
 	}{
-		{"foo: x;", "foo", "x"},
-		{"bar: true;", "bar", true},
-		{"bar: true;", "bar", true},
+		{"foo: 7,", "foo", 7},
+		{"bar: true,", "bar", true},
+		{"bar: true,", "bar", true},
+		{"bar: true,", "bar", true},
 	}
 
 	for _, tt := range tests {
@@ -25,17 +26,17 @@ func TestColumnStatements(t *testing.T) {
 		query := p.ParseQuery()
 		checkParserErrors(t, p)
 
-		if len(query.Statements) != 1 {
-			t.Fatalf("query.Statements does not contain 1 statemnets. got=%d",
-				len(query.Statements))
+		if len(query.Columns) != 1 {
+			t.Fatalf("query.Columns does not contain 1 statemnets. got=%d",
+				len(query.Columns))
 		}
 
-		stmt := query.Statements[0]
+		stmt := query.Columns[0]
 		if !testColumnStatement(t, stmt, tt.expectedIdentifier) {
 			return
 		}
 
-		val := stmt.(*ast.ColumnStatement).Value
+		val := stmt.(*ast.ColumnStatement).Expression
 		if !testLiteralExpression(t, val, tt.expectedValue) {
 			return
 		}
@@ -44,18 +45,13 @@ func TestColumnStatements(t *testing.T) {
 }
 
 func testColumnStatement(t *testing.T, s ast.Statement, name string) bool {
-	letStmt, ok := s.(*ast.ColumnStatement)
+	colStmt, ok := s.(*ast.ColumnStatement)
 	if !ok {
-		t.Errorf("s not *ast.LetStatement. got=%T", s)
-	}
-	if letStmt.Name.Value != name {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
-		return false
+		t.Errorf("s not *ast.ColumnStatement. got=%T", s)
 	}
 
-	if letStmt.Name.TokenLiteral() != name {
-		t.Errorf("letStmt.Name.TokenLiteral() not '%s'. got=%s",
-			name, letStmt.TokenLiteral())
+	if colStmt.TokenLiteral() != name {
+		t.Errorf("letStmt.TokenLiteral() not '%s'. got=%s", name, colStmt.TokenLiteral())
 		return false
 	}
 
@@ -70,12 +66,12 @@ func TestIdentifierExpression(t *testing.T) {
 	query := p.ParseQuery()
 	checkParserErrors(t, p)
 
-	if len(query.Statements) != 1 {
-		t.Fatalf("query has not enough statemnets. got=%d", len(query.Statements))
+	if len(query.Columns) != 1 {
+		t.Fatalf("query has not enough statemnets. got=%d", len(query.Columns))
 	}
-	stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+	stmt, ok := query.Columns[0].(*ast.ExpressionStatement)
 	if !ok {
-		t.Fatalf("query.Statements[0] is not ast.ExpressionStatement. got=%T", query.Statements[0])
+		t.Fatalf("query.Columns[0] is not ast.ExpressionStatement. got=%T", query.Columns[0])
 	}
 	ident, ok := stmt.Expression.(*ast.Identifier)
 	if !ok {
@@ -97,15 +93,15 @@ func TestIntegerLiteralExpression(t *testing.T) {
 	query := p.ParseQuery()
 	checkParserErrors(t, p)
 
-	if len(query.Statements) != 1 {
+	if len(query.Columns) != 1 {
 		t.Fatalf("query has not enough statements. got=%d",
-			len(query.Statements))
+			len(query.Columns))
 	}
 
-	stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+	stmt, ok := query.Columns[0].(*ast.ExpressionStatement)
 	if !ok {
-		t.Fatalf("query.Statements[0] is not ast.ExpressionStatement. got=%T",
-			query.Statements[0])
+		t.Fatalf("query.Columns[0] is not ast.ExpressionStatement. got=%T",
+			query.Columns[0])
 	}
 
 	literal, ok := stmt.Expression.(*ast.IntegerLiteral)
@@ -128,14 +124,14 @@ func TestBooleanExpression(t *testing.T) {
 	query := p.ParseQuery()
 	checkParserErrors(t, p)
 
-	if len(query.Statements) != 1 {
-		t.Fatalf("query has not enough statements. got=%d", len(query.Statements))
+	if len(query.Columns) != 1 {
+		t.Fatalf("query has not enough statements. got=%d", len(query.Columns))
 	}
 
-	stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+	stmt, ok := query.Columns[0].(*ast.ExpressionStatement)
 	if !ok {
-		t.Fatalf("query.Statements[0] is not ast.ExpressionStatement. got=%T",
-			query.Statements[0])
+		t.Fatalf("query.Columns[0] is not ast.ExpressionStatement. got=%T",
+			query.Columns[0])
 	}
 
 	literal, ok := stmt.Expression.(*ast.Boolean)
@@ -169,15 +165,15 @@ func TestParsingPrefixExpression(t *testing.T) {
 		query := p.ParseQuery()
 		checkParserErrors(t, p)
 
-		if len(query.Statements) != 1 {
-			t.Fatalf("query.Statements does not contain %d statements. got =%d",
-				1, len(query.Statements))
+		if len(query.Columns) != 1 {
+			t.Fatalf("query.Columns does not contain %d statements. got =%d",
+				1, len(query.Columns))
 		}
 
-		stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+		stmt, ok := query.Columns[0].(*ast.ExpressionStatement)
 		if !ok {
-			t.Fatalf("query.Statements[0] is not ast.ExpressionStatement, got=%T",
-				query.Statements[0])
+			t.Fatalf("query.Columns[0] is not ast.ExpressionStatement, got=%T",
+				query.Columns[0])
 		}
 
 		if !testPrefixExpression(t, stmt.Expression, tt.operator, tt.value) {
@@ -212,15 +208,15 @@ func TestParsingInfixExpressions(t *testing.T) {
 		query := p.ParseQuery()
 		checkParserErrors(t, p)
 
-		if len(query.Statements) != 1 {
-			t.Fatalf("query.Statements does not contain %d statements. got =%d",
-				1, len(query.Statements))
+		if len(query.Columns) != 1 {
+			t.Fatalf("query.Columns does not contain %d statements. got =%d",
+				1, len(query.Columns))
 		}
 
-		stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+		stmt, ok := query.Columns[0].(*ast.ExpressionStatement)
 		if !ok {
-			t.Fatalf("query.Statements[0] is not ast.ExpressionStatement, got=%T",
-				query.Statements[0])
+			t.Fatalf("query.Columns[0] is not ast.ExpressionStatement, got=%T",
+				query.Columns[0])
 		}
 
 		if !testInfixExpresssion(t, stmt.Expression, tt.leftValue, tt.operator, tt.rightValue) {
@@ -366,6 +362,10 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
 		},
+		{
+			"true == true && false == false",
+			"((true == true) && (false == false))",
+		},
 	}
 
 	for _, tt := range tests {
@@ -486,38 +486,22 @@ func testBooleanLiteral(t *testing.T, exp ast.Expression, value bool) bool {
 	return true
 }
 
-func TestCallExpressionParsing(t *testing.T) {
-	input := "add(1, 2 * 3, 4 + 5)"
+func TestStringLiteralExpression(t *testing.T) {
+	input := `'hello world'`
 
 	l := lexer.New(input)
 	p := New(l)
 	query := p.ParseQuery()
 	checkParserErrors(t, p)
 
-	if len(query.Statements) != 1 {
-		t.Fatalf("query.Statements does not contain %d statements. got=%d\n",
-			1, len(query.Statements))
-	}
-
-	stmt, ok := query.Statements[0].(*ast.ExpressionStatement)
+	stmt := query.Columns[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.StringLiteral)
 	if !ok {
-		t.Fatalf("stmt is not ast.ExpressionStatement. got=%T", query.Statements[0])
+		t.Fatalf("exp not *ast.StringLiteral. got=%T", stmt.Expression)
 	}
 
-	exp, ok := stmt.Expression.(*ast.CallExpression)
-	if !ok {
-		t.Fatalf("stmt.Expression is not ast.CallExpression. got=%T", stmt.Expression)
+	if literal.Value != "hello world" {
+		t.Errorf("literal.Value not %q. got=%q, ", "hello word", literal.Value)
 	}
 
-	if !testIdentifier(t, exp.Function, "add") {
-		return
-	}
-
-	if len(exp.Arguments) != 3 {
-		t.Fatalf("wrong length of arguments. got=%d", len(exp.Arguments))
-	}
-
-	testLiteralExpression(t, exp.Arguments[0], 1)
-	testInfixExpresssion(t, exp.Arguments[1], 2, "*", 3)
-	testInfixExpresssion(t, exp.Arguments[2], 4, "+", 5)
 }

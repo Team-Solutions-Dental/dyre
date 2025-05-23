@@ -12,7 +12,7 @@ import (
 const (
 	_ int = iota
 	LOWEST
-	EVALUATE    // :
+	CONDITION   // && ||
 	EQUALS      // ==
 	LESSGREATER // > or <
 	SUM         // +
@@ -22,11 +22,14 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
-	token.COLON:    EVALUATE,
+	token.AND:      CONDITION,
+	token.OR:       CONDITION,
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
 	token.LT:       LESSGREATER,
+	token.LTE:      LESSGREATER,
 	token.GT:       LESSGREATER,
+	token.GTE:      LESSGREATER,
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
@@ -58,12 +61,21 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.NULL, p.parseNullLiteral)
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.TRUE, p.parseBoolean)
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
+	p.registerPrefix(token.EQ, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.NOT_EQ, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.LT, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.LTE, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.GT, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.GTE, p.parseColumnPrefixExpression)
+	p.registerPrefix(token.COLUMNCALL, p.parseColumnCall)
+	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.IF, p.parseIfExpression)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
@@ -74,7 +86,11 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)
+	p.registerInfix(token.LTE, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.GTE, p.parseInfixExpression)
+	p.registerInfix(token.AND, p.parseInfixExpression)
+	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.LPAREN, p.parseCallExpression)
 
 	return p
@@ -85,14 +101,14 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
-func (p *Parser) ParseQuery() *ast.Query {
-	query := &ast.Query{}
-	query.Statements = []ast.Statement{}
+func (p *Parser) ParseQuery() *ast.QueryStatements {
+	query := &ast.QueryStatements{}
+	query.Columns = []ast.Statement{}
 
 	for p.curToken.Type != token.EOF {
 		col := p.parseStatement()
 		if col != nil {
-			query.Statements = append(query.Statements, col)
+			query.Columns = append(query.Columns, col)
 		}
 		p.nextToken()
 	}
@@ -100,31 +116,22 @@ func (p *Parser) ParseQuery() *ast.Query {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	if p.curToken.Type == token.IDENT && p.peekToken.Type == token.COLON {
+	switch p.curToken.Type {
+	case token.COLUMN:
 		return p.parseColumnStatement()
-	} else {
+	default:
 		return p.parseExpressionStatement()
 	}
 }
 
-func (p *Parser) parseColumnStatement() ast.Statement {
+func (p *Parser) parseColumnStatement() *ast.ColumnStatement {
 	stmt := &ast.ColumnStatement{Token: p.curToken}
-
-	if !p.curTokenIs(token.IDENT) {
-		return nil
-	}
-
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-
-	if !p.expectPeek(token.COLON) {
-		return nil
-	}
 
 	p.nextToken()
 
-	stmt.Value = p.parseExpression(LOWEST)
+	stmt.Expression = p.parseExpression(LOWEST)
 
-	for !p.curTokenIs(token.SEMICOLON) {
+	for !p.curTokenIs(token.COMMA) && !p.curTokenIs(token.EOF) {
 		p.nextToken()
 	}
 
@@ -200,7 +207,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 	leftExp := prefix()
 
-	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
+	for !p.peekTokenIs(token.COMMA) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -253,7 +260,7 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, go %s instead", t, p.peekToken.Type)
+	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
 }
 
@@ -395,4 +402,30 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	}
 
 	return args
+}
+
+func (p *Parser) parseColumnCall() ast.Expression {
+	return &ast.ColumnCall{Token: p.curToken}
+}
+
+func (p *Parser) parseColumnPrefixExpression() ast.Expression {
+	expression := &ast.InfixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+		Left:     &ast.ColumnCall{Token: token.Token{Type: token.COLUMNCALL, Literal: "@"}},
+	}
+
+	precedence := p.curPrecedence()
+	p.nextToken()
+	expression.Right = p.parseExpression(precedence)
+
+	return expression
+}
+
+func (p *Parser) parseNullLiteral() ast.Expression {
+	return &ast.NullLiteral{Token: p.curToken}
+}
+
+func (p *Parser) parseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 }

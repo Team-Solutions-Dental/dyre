@@ -68,16 +68,46 @@ func (l *Lexer) NextToken() token.Token {
 	case '*':
 		tok = newToken(token.ASTERISK, l.ch)
 	case '<':
-		tok = newToken(token.LT, l.ch)
+		if l.peekChar() == '=' {
+			tok = token.Token{Type: token.LTE, Literal: l.readDouble()}
+		} else {
+			tok = newToken(token.LT, l.ch)
+		}
 	case '>':
-		tok = newToken(token.GT, l.ch)
+		if l.peekChar() == '=' {
+			tok = token.Token{Type: token.GTE, Literal: l.readDouble()}
+		} else {
+			tok = newToken(token.GT, l.ch)
+		}
+	case '&':
+		if l.peekChar() == '&' {
+			tok = token.Token{Type: token.AND, Literal: l.readDouble()}
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch)
+		}
+	case '|':
+		if l.peekChar() == '|' {
+			tok = token.Token{Type: token.OR, Literal: l.readDouble()}
+		} else {
+			tok = newToken(token.ILLEGAL, l.ch)
+		}
+	case '@':
+		tok = newToken(token.COLUMNCALL, l.ch)
+	case '\'':
+		tok.Type = token.STRING
+		tok.Literal = l.readString()
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
 	default:
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
-			tok.Type = token.LookupIdent(tok.Literal)
+			if l.ch == ':' {
+				l.readChar()
+				tok.Type = token.COLUMN
+			} else {
+				tok.Type = token.LookupIdent(tok.Literal)
+			}
 			return tok
 		} else if isDigit(l.ch) {
 			tok.Literal = l.readNumber()
@@ -139,4 +169,15 @@ func isLetter(ch byte) bool {
 
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
+}
+
+func (l *Lexer) readString() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '\'' || l.ch == 0 {
+			break
+		}
+	}
+	return l.input[position:l.position]
 }

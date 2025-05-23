@@ -21,22 +21,22 @@ type Expression interface {
 	expressionNode()
 }
 
-type Query struct {
-	Statements []Statement
+type QueryStatements struct {
+	Columns []Statement
 }
 
-func (p *Query) TokenLiteral() string {
-	if len(p.Statements) > 0 {
-		return p.Statements[0].TokenLiteral()
+func (p *QueryStatements) TokenLiteral() string {
+	if len(p.Columns) > 0 {
+		return p.Columns[0].TokenLiteral()
 	} else {
 		return ""
 	}
 }
 
-func (p *Query) String() string {
+func (p *QueryStatements) String() string {
 	var out bytes.Buffer
 
-	for _, c := range p.Statements {
+	for _, c := range p.Columns {
 		out.WriteString(c.String())
 	}
 
@@ -44,23 +44,22 @@ func (p *Query) String() string {
 }
 
 type ColumnStatement struct {
-	Token token.Token
-	Name  *Identifier
-	Value Expression
+	Token      token.Token
+	Expression Expression
 }
 
 func (cs *ColumnStatement) statementNode()       {}
 func (cs *ColumnStatement) TokenLiteral() string { return cs.Token.Literal }
 func (cs *ColumnStatement) String() string {
 	var out bytes.Buffer
+	out.WriteString(cs.TokenLiteral() + ": ")
 
-	out.WriteString(cs.Name.String())
-
-	if cs.Value != nil {
-		out.WriteString(cs.Value.String())
+	if cs.Expression != nil {
+		out.WriteString(cs.Expression.String())
 	}
 
 	out.WriteString(",")
+
 	return out.String()
 }
 
@@ -113,10 +112,37 @@ func (il *IntegerLiteral) expressionNode()      {}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
 
+type NullLiteral struct {
+	Token token.Token
+}
+
+func (nl *NullLiteral) expressionNode()      {}
+func (nl *NullLiteral) TokenLiteral() string { return nl.Token.Literal }
+func (nl *NullLiteral) String() string       { return "NULL" }
+
 type PrefixExpression struct {
 	Token    token.Token
 	Operator string
 	Right    Expression
+}
+
+type ColumnPrefixExpression struct {
+	Token    token.Token
+	Operator string
+	Right    Expression
+}
+
+func (cp *ColumnPrefixExpression) expressionNode()      {}
+func (cp *ColumnPrefixExpression) TokenLiteral() string { return cp.Token.Literal }
+func (cp *ColumnPrefixExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(cp.Operator)
+	out.WriteString(cp.Right.String())
+	out.WriteString(")")
+
+	return out.String()
 }
 
 func (pe *PrefixExpression) expressionNode()      {}
@@ -210,3 +236,20 @@ func (ce *CallExpression) String() string {
 
 	return out.String()
 }
+
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
+func (sl *StringLiteral) expressionNode()      {}
+func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
+func (sl *StringLiteral) String() string       { return sl.Token.Literal }
+
+type ColumnCall struct {
+	Token token.Token
+}
+
+func (cc *ColumnCall) expressionNode()      {}
+func (cc *ColumnCall) TokenLiteral() string { return cc.Token.Literal }
+func (cc *ColumnCall) String() string       { return cc.Token.Literal }

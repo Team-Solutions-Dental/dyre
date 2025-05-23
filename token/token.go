@@ -10,9 +10,9 @@ const (
 	ILLEGAL = "ILLEGAL"
 	EOF     = "EOF"
 
-	IDENT = "IDENT"
-	INT   = "INT"
-	// COLUMN = "COLUMN" Has IDENT AND COLON
+	IDENT  = "IDENT"
+	INT    = "INT"
+	COLUMN = "COLUMN"
 
 	// Operations
 	ASSIGN   = "="
@@ -23,9 +23,13 @@ const (
 	SLASH    = "/"
 	EQ       = "=="
 	NOT_EQ   = "!="
+	AND      = "&&"
+	OR       = "||"
 
-	LT = "<"
-	GT = ">"
+	LT  = "<"
+	GT  = ">"
+	LTE = "<="
+	GTE = ">="
 
 	COMMA     = ","
 	SEMICOLON = ";"
@@ -36,24 +40,30 @@ const (
 	LBRACE = "}"
 	RBRACE = "{"
 
-	FUNCTION = "FUNCTION"
-	LET      = "LET"
+	COLUMNCALL = "@"
 
-	TRUE   = "TRUE"
-	FALSE  = "FALSE"
-	IF     = "IF"
-	ELSE   = "ELSE"
-	RETURN = "RETURN"
+	FUNCTION = "FUNCTION"
+	STRING   = "STRING"
+
+	TRUE  = "TRUE"
+	FALSE = "FALSE"
+	IF    = "IF"
+	ELSE  = "ELSE"
+	NULL  = "NULL"
 )
 
 var keywords = map[string]TokenType{
-	"fn":     FUNCTION,
-	"let":    LET,
-	"true":   TRUE,
-	"false":  FALSE,
-	"if":     IF,
-	"else":   ELSE,
-	"return": RETURN,
+	"true":  TRUE,
+	"True":  TRUE,
+	"TRUE":  TRUE,
+	"false": FALSE,
+	"False": FALSE,
+	"FALSE": FALSE,
+	"if":    IF,
+	"else":  ELSE,
+	"null":  NULL,
+	"Null":  NULL,
+	"NULL":  NULL,
 }
 
 func LookupIdent(ident string) TokenType {

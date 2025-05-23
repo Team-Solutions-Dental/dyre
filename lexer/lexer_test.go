@@ -9,18 +9,17 @@ import (
 
 func TestNextToken(t *testing.T) {
 
-	input := `Active, Name, Zip: contains(55555)`
+	input := `Active:, Name:, Zip: contains(55555)`
 
 	tests := []struct {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
-		{token.IDENT, "Active"},
+		{token.COLUMN, "Active"},
 		{token.COMMA, ","},
-		{token.IDENT, "Name"},
+		{token.COLUMN, "Name"},
 		{token.COMMA, ","},
-		{token.IDENT, "Zip"},
-		{token.COLON, ":"},
+		{token.COLUMN, "Zip"},
 		{token.IDENT, "contains"},
 		{token.LPAREN, "("},
 		{token.INT, "55555"},
