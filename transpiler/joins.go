@@ -66,6 +66,13 @@ func (js *joinStatement) Query(query string) []error {
 		return js.Errors()
 	}
 
+	for _, ss := range js.ir.SelectStatements {
+		fmt.Println(*ss.fieldName)
+		if (*ss.fieldName) != js.on {
+			js.parentIR.SelectStatements = append(js.parentIR.SelectStatements, ss)
+		}
+	}
+
 	js.parentIR.JoinStatements = append(js.parentIR.JoinStatements, js)
 
 	return nil

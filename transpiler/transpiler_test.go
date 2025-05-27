@@ -13,16 +13,16 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"int:,", "SELECT int FROM dbo.test"},
-		{"string: @ == 'Hello',", "SELECT string FROM dbo.test WHERE (string = 'Hello')"},
-		{"bool: @ == FALSE,", "SELECT bool FROM dbo.test WHERE (bool = 0)"},
-		{"int: > 5,", "SELECT int FROM dbo.test WHERE (int > 5)"},
-		{"int: > 5 || < 10,", "SELECT int FROM dbo.test WHERE ((int > 5) OR (int < 10))"},
-		{"int: @ == 5,string: @ != null,", "SELECT int, string FROM dbo.test WHERE (int = 5) AND (string != NULL)"},
-		{"int: @ == 5,string: @ != NULL,", "SELECT int, string FROM dbo.test WHERE (int = 5) AND (string != NULL)"},
-		{"string: len(@) > 5,", "SELECT string FROM dbo.test WHERE (LEN(string) > 5)"},
-		{"date: @ == date('01/02/2023'),", "SELECT date FROM dbo.test WHERE (date = CONVERT(date, '01/02/2023'))"},
-		{"int: > 5", "SELECT int FROM dbo.test WHERE (int > 5)"},
+		{"int:,", "SELECT Test.int FROM dbo.Test"},
+		{"string: @ == 'Hello',", "SELECT Test.string FROM dbo.Test WHERE (Test.string = 'Hello')"},
+		{"bool: @ == FALSE,", "SELECT Test.bool FROM dbo.Test WHERE (Test.bool = 0)"},
+		{"int: > 5,", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},
+		{"int: > 5 || < 10,", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) OR (Test.int < 10))"},
+		{"int: @ == 5,string: @ != null,", "SELECT Test.int, Test.string FROM dbo.Test WHERE (Test.int = 5) AND (Test.string != NULL)"},
+		{"int: @ == 5,string: @ != NULL,", "SELECT Test.int, Test.string FROM dbo.Test WHERE (Test.int = 5) AND (Test.string != NULL)"},
+		{"string: len(@) > 5,", "SELECT Test.string FROM dbo.Test WHERE (LEN(Test.string) > 5)"},
+		{"date: @ == date('01/02/2023'),", "SELECT Test.date FROM dbo.Test WHERE (Test.date = CONVERT(date, '01/02/2023'))"},
+		{"int: > 5", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},
 	}
 
 	for _, tt := range tests {
@@ -44,9 +44,10 @@ func testEval(input string) (string, []string) {
 	q := p.ParseQuery()
 	service := &endpoint.Service{
 		Endpoints: map[string]*endpoint.Endpoint{
-			"Test": &endpoint.Endpoint{
+			"Test": {
 				Name:       "Test",
-				TableName:  "dbo.test",
+				TableName:  "Test",
+				SchemaName: "dbo",
 				FieldNames: []string{"int", "string", "bool", "date"},
 				Fields: map[string]endpoint.Field{
 					"int":    {Name: "int", DefaultField: false, SelectStatement: "int"},

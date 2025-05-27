@@ -27,6 +27,7 @@ type Endpoint struct {
 	Fields     map[string]Field
 	FieldNames []string
 	TableName  string
+	SchemaName string
 }
 
 func (ep *Endpoint) DefaultRequest() string {

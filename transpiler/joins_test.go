@@ -15,7 +15,7 @@ func TestEvalJoins(t *testing.T) {
 		on           string
 		expected     string
 	}{
-		{"int:,string:,", "int:,", "int", "SELECT int FROM Parent INNER JOIN ( SELECT int FROM Join ) AS Join ON Parent.int = Join.int"},
+		{"int:,string:,", "int:,bool:,", "int", "SELECT Parent.int, Parent.string, Join.bool FROM Parent INNER JOIN ( SELECT Join.int, Join.bool FROM Join ) AS Join ON Parent.int = Join.int"},
 	}
 
 	for _, tt := range tests {
@@ -57,7 +57,6 @@ func testParentEval(input string) (*IR, []string) {
 				Fields: map[string]endpoint.Field{
 					"int":    {Name: "int", DefaultField: false, SelectStatement: "int"},
 					"string": {Name: "string", DefaultField: false, SelectStatement: "string"},
-					"bool":   {Name: "bool", DefaultField: false, SelectStatement: "bool"},
 					"date":   {Name: "date", DefaultField: false, SelectStatement: "date"},
 				},
 			},

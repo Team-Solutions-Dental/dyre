@@ -158,7 +158,7 @@ func (ir *IR) evalColumnCall(node ast.Node) (string, error) {
 		return "", errors.New(fmt.Sprintf("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@"))
 	}
 
-	return ir.currentField.Name, nil
+	return (ir.Endpoint.TableName + "." + ir.currentField.Name), nil
 }
 
 func (ir *IR) evalExpressions(
@@ -193,7 +193,11 @@ func (ir *IR) BuildSQLQuery() string {
 	// }
 	query = query + selectConstructor(ir.SelectStatements)
 
-	query = query + " FROM " + ir.Endpoint.TableName
+	if ir.Endpoint.SchemaName != "" {
+		query = query + " FROM " + ir.Endpoint.SchemaName + "." + ir.Endpoint.TableName
+	} else {
+		query = query + " FROM " + ir.Endpoint.TableName
+	}
 
 	if len(ir.JoinStatements) > 0 {
 		query = query + joinConstructor(ir.JoinStatements)
@@ -216,8 +220,6 @@ func selectConstructor(selects []*selectStatement) string {
 }
 
 func joinConstructor(joins []*joinStatement) string {
-	fmt.Print("JOIN")
-	fmt.Println("Join joinConstructor")
 	var joinArr []string
 	for _, j := range joins {
 		if j.errors != nil {
@@ -225,9 +227,7 @@ func joinConstructor(joins []*joinStatement) string {
 			continue
 		}
 
-		j.ir.Eval()
-
-		joinArr = append(joinArr, fmt.Sprintf("%s JOIN ( %s ) AS %s ON %s = %s", j.Type, j.ir.BuildSQLQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
+		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.Type, j.ir.BuildSQLQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
 	}
 
 	return strings.Join(joinArr, " ")
@@ -261,6 +261,19 @@ func (ir *IR) INNERJOIN(req string) *joinType {
 
 	return join
 
+}
+
+func (ir *IR) LEFTJOIN(req string) *joinType {
+	join := &joinType{Type: "LEFT", parentIR: ir}
+
+	endpoint, err := ir.Endpoint.Service.GetEndpoint(req)
+	if err != nil {
+		join.errors = append(join.errors, err)
+	}
+
+	join.endpoint = endpoint
+
+	return join
 }
 
 func (ir *IR) FieldNames() []string {

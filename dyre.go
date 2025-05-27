@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/request"
+	"github.com/vamuscari/dyre/transpiler"
 )
 
 func Init(filepath string) Dyre {
@@ -46,11 +46,11 @@ type Dyre struct {
 	service *endpoint.Service
 }
 
-func (d *Dyre) Request(req string) (*request.Request, error) {
+func (d *Dyre) Request(req string, query string) (*transpiler.IR, error) {
 	endpoint, ok := d.service.Endpoints[req]
 	if !ok {
 		return nil, errors.New("Invalid Endpoint. got=" + req)
 	}
 
-	return request.New(endpoint), nil
+	return transpiler.New(query, endpoint), nil
 }
