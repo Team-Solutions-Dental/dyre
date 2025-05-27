@@ -20,6 +20,6 @@ var builtins = map[string]func(ir *IR, args ...string) (string, error){
 				len(args)))
 		}
 
-		return fmt.Sprintf("CONVERT(date, %s)", args[0]), nil
+		return fmt.Sprintf("CONVERT(date, %s, 23)", args[0]), nil
 	},
 }

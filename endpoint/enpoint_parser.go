@@ -26,7 +26,8 @@ func ParseJSON(b []byte) (*Service, error) {
 		}
 
 		request := Endpoint{
-			Name: js_request["name"].(string),
+			Name:    js_request["name"].(string),
+			Service: &service,
 		}
 
 		expected_keys := []string{"name", "fields", "tableName", "schemaName"}
