@@ -29,7 +29,7 @@ func ParseJSON(b []byte) (*Service, error) {
 			Name: js_request["name"].(string),
 		}
 
-		expected_keys := []string{"name", "fields", "tableName"}
+		expected_keys := []string{"name", "fields", "tableName", "schemaName"}
 		for i := range js_request {
 			if !utils.Array_Contains(expected_keys, i) {
 				fmt.Printf("WARN: Unexpected Key %s on Request %s\n", i, request.Name)
@@ -38,6 +38,10 @@ func ParseJSON(b []byte) (*Service, error) {
 
 		if tableName, ok := js_request["tableName"]; ok {
 			request.TableName = tableName.(string)
+		}
+
+		if schemaName, ok := js_request["schemaName"]; ok {
+			request.SchemaName = schemaName.(string)
 		}
 
 		if fields, ok := js_request["fields"]; ok {
@@ -84,7 +88,7 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 			}
 
 			dyre_fields[v.(string)] = Field{
-				Endpoint:     endpoint,
+				endpoint:     endpoint,
 				Name:         v.(string),
 				DefaultField: false,
 				// TypeName:     DefaultType,
@@ -96,7 +100,7 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 
 			field_map := v.(map[string]interface{})
 
-			new_field := Field{}
+			new_field := Field{endpoint: endpoint, DefaultField: false}
 
 			if name, ok := field_map["name"]; ok {
 				if nameString, ok := name.(string); ok {
@@ -149,7 +153,7 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 			// 	new_field.SqlSelect = new_field.Name
 			// }
 
-			expected_keys := []string{"name", "required", "type", "sqlSelect"}
+			expected_keys := []string{"name", "defaultField"}
 			for i := range field_map {
 				if !utils.Array_Contains(expected_keys, i) {
 					fmt.Printf("WARN: Request %s, Unexpected Key %s on Field %s\n", req, i, new_field.Name)

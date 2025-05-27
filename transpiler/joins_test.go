@@ -46,41 +46,35 @@ func testParentEval(input string) (*IR, []string) {
 	l := lexer.New(input)
 	p := parser.New(l)
 	q := p.ParseQuery()
-	var service *endpoint.Service
-	service = &endpoint.Service{
-		Endpoints: map[string]*endpoint.Endpoint{
-			"Parent": {
-				Service:    service,
-				Name:       "Parent",
-				TableName:  "Parent",
-				FieldNames: []string{"int", "string", "bool", "date"},
-				Fields: map[string]endpoint.Field{
-					"int":    {Name: "int", DefaultField: false, SelectStatement: "int"},
-					"string": {Name: "string", DefaultField: false, SelectStatement: "string"},
-					"date":   {Name: "date", DefaultField: false, SelectStatement: "date"},
-				},
-			},
-			"Join": {
-				Service:    service,
-				Name:       "Join",
-				TableName:  "Join",
-				FieldNames: []string{"int", "string", "bool", "date"},
-				Fields: map[string]endpoint.Field{
-					"int":    {Name: "int", DefaultField: false, SelectStatement: "int"},
-					"string": {Name: "string", DefaultField: false, SelectStatement: "string"},
-					"bool":   {Name: "bool", DefaultField: false, SelectStatement: "bool"},
-					"date":   {Name: "date", DefaultField: false, SelectStatement: "date"},
-				},
-			},
+	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
+
+	parent := endpoint.Endpoint{
+		Service:    service,
+		Name:       "Parent",
+		TableName:  "Parent",
+		FieldNames: []string{"int", "string", "bool", "date"},
+		Fields: map[string]endpoint.Field{
+			"int":    {Name: "int", DefaultField: false},
+			"string": {Name: "string", DefaultField: false},
+			"date":   {Name: "date", DefaultField: false},
 		},
 	}
 
-	for _, e := range service.Endpoints {
-		e.Service = service
-		for _, f := range e.Fields {
-			f.Endpoint = e
-		}
+	join := endpoint.Endpoint{
+		Service:    service,
+		Name:       "Join",
+		TableName:  "Join",
+		FieldNames: []string{"int", "string", "bool", "date"},
+		Fields: map[string]endpoint.Field{
+			"int":    {Name: "int", DefaultField: false},
+			"string": {Name: "string", DefaultField: false},
+			"bool":   {Name: "bool", DefaultField: false},
+			"date":   {Name: "date", DefaultField: false},
+		},
 	}
+
+	service.Endpoints["Parent"] = &parent
+	service.Endpoints["Join"] = &join
 
 	ir := &IR{
 		Endpoint: service.Endpoints["Parent"],

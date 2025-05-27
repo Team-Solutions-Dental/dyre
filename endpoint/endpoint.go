@@ -41,8 +41,11 @@ func (ep *Endpoint) DefaultRequest() string {
 }
 
 type Field struct {
-	Endpoint        *Endpoint
-	Name            string
-	DefaultField    bool
-	SelectStatement string
+	endpoint     *Endpoint
+	Name         string
+	DefaultField bool
+}
+
+func (f *Field) Endpoint() *Endpoint {
+	return f.endpoint
 }

@@ -18,18 +18,18 @@ func TestParseJSON(t *testing.T) {
 		{
 			"name": "ParserTest",
 			"tableName": "Table",
+			"schemaName": "dbo",
 			"fields": [
 				{
 					"name": "field1",
-					"required": true
+					"defaultField": true
 				},
 				{
 					"name": "field2",
-					"required": true,
-					"sqlSelect": "fieldX AS field2"
+					"defaultField": false
 				},
 				"field3"
-			],
+			]
 		}
 	]
 	`
@@ -39,7 +39,7 @@ func TestParseJSON(t *testing.T) {
 		t.Fatalf(`error: %v`, err)
 	}
 	test_name := "ParserTest"
-	re, ok := dyre_requests[test_name]
+	re, ok := dyre_requests.Endpoints[test_name]
 	if !ok {
 		t.Error("Map key error for ParserTest")
 	}

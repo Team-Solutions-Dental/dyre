@@ -22,8 +22,6 @@ func (r *Request) EvaluateQuery(input string) {
 	l := lexer.New(input)
 	p := parser.New(l)
 	r.Ast = p.ParseQuery()
-	r.IR = transpiler.New(r.Ast, r.Endpoint)
-	r.IR.Eval()
 }
 
 func (r *Request) BuildSQL() string {
