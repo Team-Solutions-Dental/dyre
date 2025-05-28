@@ -12,15 +12,6 @@ import (
 	"github.com/vamuscari/dyre/utils"
 )
 
-func New(query string, endpoint *endpoint.Endpoint) *IR {
-	l := lexer.New(query)
-	p := parser.New(l)
-	q := p.ParseQuery()
-	var ir IR = IR{endpoint: endpoint, ast: q}
-	ir.eval()
-	return &ir
-}
-
 // Intermediate Representation
 type IR struct {
 	endpoint         *endpoint.Endpoint
@@ -31,15 +22,41 @@ type IR struct {
 	limit            *int
 	whereStatements  []string
 	joinStatements   []*joinStatement
-	Errors           []string
+	Errors           []error
+}
+
+func New(query string, endpoint *endpoint.Endpoint) *IR {
+	l := lexer.New(query)
+	p := parser.New(l)
+	q := p.ParseQuery()
+	var ir IR = IR{endpoint: endpoint, ast: q}
+	return &ir
+}
+
+func (ir *IR) EvaluateQuery() string {
+	ir.eval()
+	return ir.sqlQuery()
 }
 
 // TODO: reorder columns for select if found
 func (ir *IR) eval() {
 
+	for _, js := range ir.joinStatements {
+		js.ir.eval()
+	}
+
+	ir.evalColumns()
+
+	for _, js := range ir.joinStatements {
+		js.appendSelectStatements()
+	}
+
+}
+
+func (ir *IR) evalColumns() {
 	for _, statement := range ir.ast.Columns {
 		if !utils.Array_Contains(ir.endpoint.FieldNames, statement.TokenLiteral()) {
-			ir.Errors = append(ir.Errors, "column not found: "+statement.TokenLiteral())
+			ir.Errors = append(ir.Errors, errors.New("column not found: "+statement.TokenLiteral()))
 		}
 
 		column := ir.endpoint.Fields[statement.TokenLiteral()]
@@ -65,12 +82,13 @@ func (ir *IR) eval() {
 			ir.selectStatements = append(ir.selectStatements, selects)
 		}
 	}
+
 }
 
 func (ir *IR) evalColumnStatement(node ast.Node) {
 	statement, ok := node.(*ast.ColumnStatement)
 	if !ok {
-		ir.Errors = append(ir.Errors, "Invalid statement")
+		ir.Errors = append(ir.Errors, errors.New("Invalid statement "+statement.String()))
 		return
 	}
 
@@ -81,7 +99,7 @@ func (ir *IR) evalColumnStatement(node ast.Node) {
 
 	eval, err := ir.evalExpression(exp)
 	if err != nil {
-		ir.Errors = append(ir.Errors, err.Error())
+		ir.Errors = append(ir.Errors, err)
 	}
 
 	ir.whereStatements = append(ir.whereStatements, eval)
@@ -201,7 +219,8 @@ func (ir *IR) evalCallExpression(function string, exps []ast.Expression) (string
 	return builtins[function](ir, args...)
 }
 
-func (ir *IR) BuildSQLQuery() string {
+func (ir *IR) sqlQuery() string {
+
 	var query string = "SELECT "
 
 	if ir.limit != nil && *ir.limit > 0 {
@@ -244,7 +263,7 @@ func joinConstructor(joins []*joinStatement) string {
 			continue
 		}
 
-		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.Type, j.ir.BuildSQLQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
+		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.Type, j.ir.sqlQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
 	}
 
 	return strings.Join(joinArr, " ")

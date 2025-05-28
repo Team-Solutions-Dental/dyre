@@ -25,11 +25,11 @@ func TestEvalQueries(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		evalualted_ir := testNew(tt.input)
-		sql_statement := evalualted_ir.BuildSQLQuery()
+		ir := testNew(tt.input)
+		sql_statement := ir.EvaluateQuery()
 
-		if evalualted_ir.Errors != nil {
-			for _, e := range evalualted_ir.Errors {
+		if ir.Errors != nil {
+			for _, e := range ir.Errors {
 				t.Errorf("Query test error. [%s] %s\n", tt.input, e)
 			}
 		}
@@ -52,7 +52,7 @@ func TestLimit(t *testing.T) {
 	for _, tt := range tests {
 		evalualted_ir := testNew(tt.input)
 		evalualted_ir.LIMIT(tt.limit)
-		sql_statement := evalualted_ir.BuildSQLQuery()
+		sql_statement := evalualted_ir.EvaluateQuery()
 
 		if evalualted_ir.Errors != nil {
 			for _, e := range evalualted_ir.Errors {

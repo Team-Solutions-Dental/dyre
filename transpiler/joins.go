@@ -44,18 +44,35 @@ func (js *joinStatement) Errors() []error {
 	return js.errors
 }
 
-func (js *joinStatement) Query(query string) []error {
+func (js *joinStatement) Query(query string) (*IR, []error) {
 	if js.errors != nil {
-		return js.Errors()
+		return nil, js.errors
 	}
 
 	js.ir = New(query, js.endpoint)
 
+	// append joined fields except on field
+	js.parentIR.joinStatements = append(js.parentIR.joinStatements, js)
+
 	// do this after on SQL Build
+	// parent_contains := utils.Array_Contains(js.parentIR.FieldNames(), js.parent_on)
+	// if !parent_contains {
+	// 	js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.endpoint.Name, js.parent_on)))
+	//
+	// }
+	//
+	// join_contains := utils.Array_Contains(js.ir.FieldNames(), js.on)
+	// if !join_contains {
+	// 	js.errors = append(js.errors, errors.New(fmt.Sprintf("Join query %s does not contain %s", js.ir.endpoint.Name, js.on)))
+	// }
+
+	return js.ir, js.errors
+}
+
+func (js *joinStatement) appendSelectStatements() {
 	parent_contains := utils.Array_Contains(js.parentIR.FieldNames(), js.parent_on)
 	if !parent_contains {
 		js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.endpoint.Name, js.parent_on)))
-
 	}
 
 	join_contains := utils.Array_Contains(js.ir.FieldNames(), js.on)
@@ -63,20 +80,11 @@ func (js *joinStatement) Query(query string) []error {
 		js.errors = append(js.errors, errors.New(fmt.Sprintf("Join query %s does not contain %s", js.ir.endpoint.Name, js.on)))
 	}
 
-	if js.errors != nil {
-		return js.Errors()
-	}
-
-	// append joined fields except on field
 	for _, ss := range js.ir.selectStatements {
 		if (*ss.fieldName) != js.on {
-			js.parentIR.selectStatements = append(js.parentIR.selectStatements, ss)
+			js.parentIR.selectStatements = append(js.parentIR.selectStatements, &selectStatement{fieldName: ss.fieldName, tableName: &js.ir.endpoint.TableName})
 		}
 	}
-
-	js.parentIR.joinStatements = append(js.parentIR.joinStatements, js)
-
-	return nil
 }
 
 func (js *joinStatement) parentIrOn() string {
