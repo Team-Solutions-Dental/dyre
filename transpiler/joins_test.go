@@ -77,11 +77,11 @@ func testParentEval(input string) (*IR, []string) {
 	service.Endpoints["Join"] = &join
 
 	ir := &IR{
-		Endpoint: service.Endpoints["Parent"],
-		Ast:      q,
+		endpoint: service.Endpoints["Parent"],
+		ast:      q,
 	}
 
-	ir.Eval()
+	ir.eval()
 
 	return ir, ir.Errors
 }

@@ -53,35 +53,35 @@ func (js *joinStatement) Query(query string) []error {
 	// do this after on SQL Build
 	parent_contains := utils.Array_Contains(js.parentIR.FieldNames(), js.on)
 	if !parent_contains {
-		js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.Endpoint.Name, js.on)))
+		js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.endpoint.Name, js.on)))
 
 	}
 
 	join_contains := utils.Array_Contains(js.ir.FieldNames(), js.on)
 	if !join_contains {
-		js.errors = append(js.errors, errors.New(fmt.Sprintf("Join query %s does not contain %s", js.ir.Endpoint.Name, js.on)))
+		js.errors = append(js.errors, errors.New(fmt.Sprintf("Join query %s does not contain %s", js.ir.endpoint.Name, js.on)))
 	}
 
 	if js.errors != nil {
 		return js.Errors()
 	}
 
-	for _, ss := range js.ir.SelectStatements {
+	for _, ss := range js.ir.selectStatements {
 		fmt.Println(*ss.fieldName)
 		if (*ss.fieldName) != js.on {
-			js.parentIR.SelectStatements = append(js.parentIR.SelectStatements, ss)
+			js.parentIR.selectStatements = append(js.parentIR.selectStatements, ss)
 		}
 	}
 
-	js.parentIR.JoinStatements = append(js.parentIR.JoinStatements, js)
+	js.parentIR.joinStatements = append(js.parentIR.joinStatements, js)
 
 	return nil
 }
 
 func (js *joinStatement) parentIrOn() string {
-	return fmt.Sprintf("%s.%s", js.parentIR.Endpoint.TableName, js.on)
+	return fmt.Sprintf("%s.%s", js.parentIR.endpoint.TableName, js.on)
 }
 
 func (js *joinStatement) joinIrOn() string {
-	return fmt.Sprintf("%s.%s", js.ir.Endpoint.TableName, js.on)
+	return fmt.Sprintf("%s.%s", js.ir.endpoint.TableName, js.on)
 }

@@ -16,39 +16,54 @@ func New(query string, endpoint *endpoint.Endpoint) *IR {
 	l := lexer.New(query)
 	p := parser.New(l)
 	q := p.ParseQuery()
-	var ir IR = IR{Endpoint: endpoint, Ast: q}
-	ir.Eval()
+	var ir IR = IR{endpoint: endpoint, ast: q}
+	ir.eval()
 	return &ir
 }
 
 // Intermediate Representation
 type IR struct {
-	Endpoint         *endpoint.Endpoint
-	Ast              *ast.QueryStatements
+	endpoint         *endpoint.Endpoint
+	ast              *ast.QueryStatements
 	currentField     *endpoint.Field
 	fields           []*endpoint.Field
-	SelectStatements []*selectStatement
-	Limit            int
-	WhereStatements  []string
-	JoinStatements   []*joinStatement
+	selectStatements []*selectStatement
+	limit            *int
+	whereStatements  []string
+	joinStatements   []*joinStatement
 	Errors           []string
 }
 
-func (ir *IR) Eval() {
+// TODO: reorder columns for select if found
+func (ir *IR) eval() {
 
-	for _, statement := range ir.Ast.Columns {
-		if !utils.Array_Contains(ir.Endpoint.FieldNames, statement.TokenLiteral()) {
+	for _, statement := range ir.ast.Columns {
+		if !utils.Array_Contains(ir.endpoint.FieldNames, statement.TokenLiteral()) {
 			ir.Errors = append(ir.Errors, "column not found: "+statement.TokenLiteral())
 		}
 
-		column := ir.Endpoint.Fields[statement.TokenLiteral()]
+		column := ir.endpoint.Fields[statement.TokenLiteral()]
 		ir.currentField = &column
 		ir.fields = append(ir.fields, ir.currentField)
 
 		ir.evalColumnStatement(statement)
 
-		selects := &selectStatement{fieldName: &ir.currentField.Name, tableName: &ir.Endpoint.TableName}
-		ir.SelectStatements = append(ir.SelectStatements, selects)
+		selectStatementLoc := ir.selectStatementLocation(ir.currentField.Name)
+		if selectStatementLoc >= 0 {
+			newSelectStatement := []*selectStatement{}
+			for i, ss := range ir.selectStatements {
+				if i != selectStatementLoc {
+					newSelectStatement = append(newSelectStatement, ss)
+				}
+			}
+
+			newSelectStatement = append(newSelectStatement, ir.selectStatements[selectStatementLoc])
+			ir.selectStatements = newSelectStatement
+
+		} else {
+			selects := &selectStatement{fieldName: &ir.currentField.Name, tableName: &ir.endpoint.TableName}
+			ir.selectStatements = append(ir.selectStatements, selects)
+		}
 	}
 }
 
@@ -69,7 +84,7 @@ func (ir *IR) evalColumnStatement(node ast.Node) {
 		ir.Errors = append(ir.Errors, err.Error())
 	}
 
-	ir.WhereStatements = append(ir.WhereStatements, eval)
+	ir.whereStatements = append(ir.whereStatements, eval)
 
 	return
 }
@@ -158,7 +173,7 @@ func (ir *IR) evalColumnCall(node ast.Node) (string, error) {
 		return "", errors.New(fmt.Sprintf("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@"))
 	}
 
-	return (ir.Endpoint.TableName + "." + ir.currentField.Name), nil
+	return (ir.endpoint.TableName + "." + ir.currentField.Name), nil
 }
 
 func (ir *IR) evalExpressions(
@@ -187,24 +202,26 @@ func (ir *IR) evalCallExpression(function string, exps []ast.Expression) (string
 }
 
 func (ir *IR) BuildSQLQuery() string {
-	var query string = ""
-	// if ir.Limit > 0 {
-	// 	query = query + fmt.Sprintf("TOP %d", ir.Limit)
-	// }
-	query = query + selectConstructor(ir.SelectStatements)
+	var query string = "SELECT "
 
-	if ir.Endpoint.SchemaName != "" {
-		query = query + " FROM " + ir.Endpoint.SchemaName + "." + ir.Endpoint.TableName
+	if ir.limit != nil && *ir.limit > 0 {
+		query = query + fmt.Sprintf("TOP %d ", *ir.limit)
+	}
+
+	query = query + selectConstructor(ir.selectStatements)
+
+	if ir.endpoint.SchemaName != "" {
+		query = query + " FROM " + ir.endpoint.SchemaName + "." + ir.endpoint.TableName
 	} else {
-		query = query + " FROM " + ir.Endpoint.TableName
+		query = query + " FROM " + ir.endpoint.TableName
 	}
 
-	if len(ir.JoinStatements) > 0 {
-		query = query + joinConstructor(ir.JoinStatements)
+	if len(ir.joinStatements) > 0 {
+		query = query + joinConstructor(ir.joinStatements)
 	}
 
-	if len(ir.WhereStatements) > 0 {
-		query = query + whereConstructor(ir.WhereStatements)
+	if len(ir.whereStatements) > 0 {
+		query = query + whereConstructor(ir.whereStatements)
 	}
 
 	return query
@@ -216,7 +233,7 @@ func selectConstructor(selects []*selectStatement) string {
 		selectStrings = append(selectStrings, ss.String())
 	}
 
-	return "SELECT " + strings.Join(selectStrings, ", ")
+	return strings.Join(selectStrings, ", ")
 }
 
 func joinConstructor(joins []*joinStatement) string {
@@ -252,7 +269,7 @@ func whereConstructor(statements []string) string {
 func (ir *IR) INNERJOIN(req string) *joinType {
 	join := &joinType{Type: "INNER", parentIR: ir}
 
-	endpoint, err := ir.Endpoint.Service.GetEndpoint(req)
+	endpoint, err := ir.endpoint.Service.GetEndpoint(req)
 	if err != nil {
 		join.errors = append(join.errors, err)
 	}
@@ -266,7 +283,7 @@ func (ir *IR) INNERJOIN(req string) *joinType {
 func (ir *IR) LEFTJOIN(req string) *joinType {
 	join := &joinType{Type: "LEFT", parentIR: ir}
 
-	endpoint, err := ir.Endpoint.Service.GetEndpoint(req)
+	endpoint, err := ir.endpoint.Service.GetEndpoint(req)
 	if err != nil {
 		join.errors = append(join.errors, err)
 	}
@@ -284,4 +301,18 @@ func (ir *IR) FieldNames() []string {
 	}
 
 	return names
+}
+
+func (ir *IR) selectStatementLocation(input string) int {
+	for i, ss := range ir.selectStatements {
+		if *ss.fieldName == input {
+			return i
+		}
+	}
+	return -1
+}
+
+func (ir *IR) LIMIT(input int) *IR {
+	ir.limit = &input
+	return ir
 }
