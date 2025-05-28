@@ -12,10 +12,12 @@ func TestEvalJoins(t *testing.T) {
 	tests := []struct {
 		input_parent string
 		input_join   string
+		parent_on    string
 		on           string
 		expected     string
 	}{
-		{"int:,string:,", "int:,bool:,", "int", "SELECT Parent.int, Parent.string, Join.bool FROM Parent INNER JOIN ( SELECT Join.int, Join.bool FROM Join ) AS Join ON Parent.int = Join.int"},
+		{"int:,string:,", "int:,bool:,", "int", "int", "SELECT Parent.int, Parent.string, Join.bool FROM Parent INNER JOIN ( SELECT Join.int, Join.bool FROM Join ) AS Join ON Parent.int = Join.int"},
+		{"int:,string:,", "intj:,bool:,", "int", "intj", "SELECT Parent.int, Parent.string, Join.bool FROM Parent INNER JOIN ( SELECT Join.intj, Join.bool FROM Join ) AS Join ON Parent.int = Join.intj"},
 	}
 
 	for _, tt := range tests {
@@ -26,7 +28,7 @@ func TestEvalJoins(t *testing.T) {
 			}
 		}
 
-		eerrs := parent_ir.INNERJOIN("Join").ON(tt.on).Query(tt.input_join)
+		eerrs := parent_ir.INNERJOIN("Join").ON(tt.parent_on, tt.on).Query(tt.input_join)
 		if eerrs != nil {
 			for _, e := range eerrs {
 				t.Errorf("Query test error. [%s] %v\n", tt.input_parent, e)
@@ -64,9 +66,10 @@ func testParentEval(input string) (*IR, []string) {
 		Service:    service,
 		Name:       "Join",
 		TableName:  "Join",
-		FieldNames: []string{"int", "string", "bool", "date"},
+		FieldNames: []string{"int", "intj", "string", "bool", "date"},
 		Fields: map[string]endpoint.Field{
 			"int":    {Name: "int", DefaultField: false},
+			"intj":   {Name: "intj", DefaultField: false},
 			"string": {Name: "string", DefaultField: false},
 			"bool":   {Name: "bool", DefaultField: false},
 			"date":   {Name: "date", DefaultField: false},

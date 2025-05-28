@@ -24,19 +24,20 @@ func (jt *joinType) Errors() []error {
 	return jt.errors
 }
 
-func (jt *joinType) ON(field string) *joinStatement {
-	return &joinStatement{Type: jt.Type, parentIR: jt.parentIR, endpoint: jt.endpoint, errors: jt.errors, on: field}
+func (jt *joinType) ON(parent_on, on string) *joinStatement {
+	return &joinStatement{Type: jt.Type, parentIR: jt.parentIR, endpoint: jt.endpoint, errors: jt.errors, parent_on: parent_on, on: on}
 }
 
 type joinStatement struct {
 	Join
-	Type     string
-	parentIR *IR
-	endpoint *endpoint.Endpoint
-	errors   []error
-	on       string
-	joinType string
-	ir       *IR
+	Type      string
+	parentIR  *IR
+	endpoint  *endpoint.Endpoint
+	errors    []error
+	parent_on string
+	on        string
+	joinType  string
+	ir        *IR
 }
 
 func (js *joinStatement) Errors() []error {
@@ -51,9 +52,9 @@ func (js *joinStatement) Query(query string) []error {
 	js.ir = New(query, js.endpoint)
 
 	// do this after on SQL Build
-	parent_contains := utils.Array_Contains(js.parentIR.FieldNames(), js.on)
+	parent_contains := utils.Array_Contains(js.parentIR.FieldNames(), js.parent_on)
 	if !parent_contains {
-		js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.endpoint.Name, js.on)))
+		js.errors = append(js.errors, errors.New(fmt.Sprintf("Parent query %s does not contain %s", js.parentIR.endpoint.Name, js.parent_on)))
 
 	}
 
@@ -66,8 +67,8 @@ func (js *joinStatement) Query(query string) []error {
 		return js.Errors()
 	}
 
+	// append joined fields except on field
 	for _, ss := range js.ir.selectStatements {
-		fmt.Println(*ss.fieldName)
 		if (*ss.fieldName) != js.on {
 			js.parentIR.selectStatements = append(js.parentIR.selectStatements, ss)
 		}
@@ -79,7 +80,7 @@ func (js *joinStatement) Query(query string) []error {
 }
 
 func (js *joinStatement) parentIrOn() string {
-	return fmt.Sprintf("%s.%s", js.parentIR.endpoint.TableName, js.on)
+	return fmt.Sprintf("%s.%s", js.parentIR.endpoint.TableName, js.parent_on)
 }
 
 func (js *joinStatement) joinIrOn() string {
