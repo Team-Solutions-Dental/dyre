@@ -14,7 +14,7 @@ type Join interface {
 
 type joinType struct {
 	Join
-	Type     string
+	joinType string
 	parentIR *IR
 	endpoint *endpoint.Endpoint
 	errors   []error
@@ -25,12 +25,11 @@ func (jt *joinType) Errors() []error {
 }
 
 func (jt *joinType) ON(parent_on, on string) *joinStatement {
-	return &joinStatement{Type: jt.Type, parentIR: jt.parentIR, endpoint: jt.endpoint, errors: jt.errors, parent_on: parent_on, on: on}
+	return &joinStatement{joinType: jt.joinType, parentIR: jt.parentIR, endpoint: jt.endpoint, errors: jt.errors, parent_on: parent_on, on: on}
 }
 
 type joinStatement struct {
 	Join
-	Type      string
 	parentIR  *IR
 	endpoint  *endpoint.Endpoint
 	errors    []error

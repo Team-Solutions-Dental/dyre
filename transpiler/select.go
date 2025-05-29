@@ -8,6 +8,7 @@ type selectStatement struct {
 	fieldName *string
 	tableName *string
 	alias     *string
+	exclude   bool
 }
 
 func (ss *selectStatement) String() string {

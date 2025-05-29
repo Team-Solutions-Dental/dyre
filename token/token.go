@@ -23,8 +23,6 @@ const (
 	SLASH    = "/"
 	EQ       = "=="
 	NOT_EQ   = "!="
-	AND      = "&&"
-	OR       = "||"
 
 	LT  = "<"
 	GT  = ">"
@@ -49,6 +47,8 @@ const (
 	FALSE = "FALSE"
 	IF    = "IF"
 	ELSE  = "ELSE"
+	AND   = "AND"
+	OR    = "OR"
 	NULL  = "NULL"
 )
 
@@ -64,6 +64,8 @@ var keywords = map[string]TokenType{
 	"null":  NULL,
 	"Null":  NULL,
 	"NULL":  NULL,
+	"AND":   AND,
+	"OR":    OR,
 }
 
 func LookupIdent(ident string) TokenType {

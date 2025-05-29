@@ -11,12 +11,13 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"int:,", "SELECT Test.int FROM dbo.Test"},                                                       // Basic Request
-		{"int:,string:,int:,", "SELECT Test.string, Test.int FROM dbo.Test"},                             // Reorder
-		{"string: @ == 'Hello',", "SELECT Test.string FROM dbo.Test WHERE (Test.string = 'Hello')"},      // @ reference call
-		{"bool: @ == FALSE,", "SELECT Test.bool FROM dbo.Test WHERE (Test.bool = 0)"},                    // Boolean Test
-		{"int:, int: > 5,", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},                        // Integer Test
-		{"int: > 5 || < 10,", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) OR (Test.int < 10))"}, // OR Statement
+		{"int:,", "SELECT Test.int FROM dbo.Test"},                                                         // Basic Request
+		{"int:,string:,int:,", "SELECT Test.string, Test.int FROM dbo.Test"},                               // Reorder
+		{"string: @ == 'Hello',", "SELECT Test.string FROM dbo.Test WHERE (Test.string = 'Hello')"},        // @ reference call
+		{"bool: @ == FALSE,", "SELECT Test.bool FROM dbo.Test WHERE (Test.bool = 0)"},                      // Boolean Test
+		{"int:, int: > 5,", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},                          // Integer Test
+		{"int: > 5 OR < 10,", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) OR (Test.int < 10))"},   // OR Statement
+		{"int: > 5 AND < 10,", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) AND (Test.int < 10))"}, // AND Statement
 		{"int: @ == 5,string: @ != null,", "SELECT Test.int, Test.string FROM dbo.Test WHERE (Test.int = 5) AND (Test.string != NULL)"},
 		{"int: @ == 5,string: @ != NULL,", "SELECT Test.int, Test.string FROM dbo.Test WHERE (Test.int = 5) AND (Test.string != NULL)"},
 		{"string: len(@) > 5,", "SELECT Test.string FROM dbo.Test WHERE (LEN(Test.string) > 5)"},

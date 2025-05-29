@@ -176,9 +176,9 @@ func evalInfixExpression(operator, left, right string) string {
 		return fmt.Sprintf("(%s >= %s)", left, right)
 	case operator == "<=":
 		return fmt.Sprintf("(%s <= %s)", left, right)
-	case operator == "&&":
+	case operator == "AND":
 		return fmt.Sprintf("(%s AND %s)", left, right)
-	case operator == "||":
+	case operator == "OR":
 		return fmt.Sprintf("(%s OR %s)", left, right)
 	default:
 		return ""
@@ -263,7 +263,7 @@ func joinConstructor(joins []*joinStatement) string {
 			continue
 		}
 
-		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.Type, j.ir.sqlQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
+		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.joinType, j.ir.sqlQuery(), j.endpoint.TableName, j.parentIrOn(), j.joinIrOn()))
 	}
 
 	return strings.Join(joinArr, " ")
@@ -286,7 +286,7 @@ func whereConstructor(statements []string) string {
 }
 
 func (ir *IR) INNERJOIN(req string) *joinType {
-	join := &joinType{Type: "INNER", parentIR: ir}
+	join := &joinType{joinType: "INNER", parentIR: ir}
 
 	endpoint, err := ir.endpoint.Service.GetEndpoint(req)
 	if err != nil {
@@ -300,7 +300,7 @@ func (ir *IR) INNERJOIN(req string) *joinType {
 }
 
 func (ir *IR) LEFTJOIN(req string) *joinType {
-	join := &joinType{Type: "LEFT", parentIR: ir}
+	join := &joinType{joinType: "LEFT", parentIR: ir}
 
 	endpoint, err := ir.endpoint.Service.GetEndpoint(req)
 	if err != nil {
