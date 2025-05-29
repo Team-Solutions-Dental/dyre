@@ -22,12 +22,12 @@ type Expression interface {
 }
 
 type QueryStatements struct {
-	Columns []Statement
+	Statements []Statement
 }
 
 func (p *QueryStatements) TokenLiteral() string {
-	if len(p.Columns) > 0 {
-		return p.Columns[0].TokenLiteral()
+	if len(p.Statements) > 0 {
+		return p.Statements[0].TokenLiteral()
 	} else {
 		return ""
 	}
@@ -36,7 +36,7 @@ func (p *QueryStatements) TokenLiteral() string {
 func (p *QueryStatements) String() string {
 	var out bytes.Buffer
 
-	for _, c := range p.Columns {
+	for _, c := range p.Statements {
 		out.WriteString(c.String())
 	}
 
@@ -44,8 +44,8 @@ func (p *QueryStatements) String() string {
 }
 
 type ColumnStatement struct {
-	Token      token.Token
-	Expression Expression
+	Token       token.Token
+	Expressions *BlockStatement
 }
 
 func (cs *ColumnStatement) statementNode()       {}
@@ -54,8 +54,8 @@ func (cs *ColumnStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(cs.TokenLiteral() + ": ")
 
-	if cs.Expression != nil {
-		out.WriteString(cs.Expression.String())
+	if cs.Expressions != nil {
+		out.WriteString(cs.Expressions.String())
 	}
 
 	out.WriteString(",")
