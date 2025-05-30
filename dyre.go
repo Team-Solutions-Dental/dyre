@@ -52,5 +52,5 @@ func (d *Dyre) Request(req string, query string) (*transpiler.IR, error) {
 		return nil, errors.New("Invalid Endpoint. got=" + req)
 	}
 
-	return transpiler.New(query, endpoint), nil
+	return transpiler.New(query, endpoint)
 }
