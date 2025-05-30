@@ -126,15 +126,32 @@ func (p *Parser) parseStatement() ast.Statement {
 func (p *Parser) parseColumnStatement() *ast.ColumnStatement {
 	stmt := &ast.ColumnStatement{Token: p.curToken}
 
-	p.nextToken()
-
-	stmt.Expressions = p.parseBlockStatement()
-
-	for !p.curTokenIs(token.EOF) && !p.peekTokenIs(token.COLUMN) {
-		p.nextToken()
+	if !p.peekTokenIs(token.COLUMN) && !p.peekTokenIs(token.EOF) {
+		stmt.Expressions = p.parseBlockStatement()
 	}
 
+	// for p.peekTokenIs(token.SEMICOLON) {
+	// 	p.nextToken()
+	// }
+	// if !p.curTokenIs(token.SEMICOLON) && !p.curTokenIs(token.EOF) {
+	// 	p.nextToken()
+	// }
+
 	return stmt
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	block := &ast.BlockStatement{Token: p.curToken}
+	block.Statements = []ast.Statement{}
+
+	for !p.peekTokenIs(token.COLUMN) && !p.peekTokenIs(token.EOF) {
+		p.nextToken()
+		stmt := p.parseStatement()
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
+		}
+	}
+	return block
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
@@ -144,26 +161,15 @@ func (p *Parser) parseIdentifier() ast.Expression {
 func (p *Parser) parseExpressionStatement() ast.Statement {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
-	stmt.Expression = p.parseExpression(LOWEST)
+	if !p.curTokenIs(token.SEMICOLON) {
+		stmt.Expression = p.parseExpression(LOWEST)
+	}
 
-	if p.peekTokenIs(token.SEMICOLON) {
+	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
 	}
 
 	return stmt
-}
-
-func (p *Parser) parsePrefixExpression() ast.Expression {
-	expression := &ast.PrefixExpression{
-		Token:    p.curToken,
-		Operator: p.curToken.Literal,
-	}
-
-	p.nextToken()
-
-	expression.Right = p.parseExpression(PREFIX)
-
-	return expression
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {
@@ -183,6 +189,42 @@ func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.curToken.Type]
+	if prefix == nil {
+		p.noPrefixParseFnError(p.curToken.Type)
+		return nil
+	}
+
+	leftExp := prefix()
+
+	for !p.peekTokenIs(token.SEMICOLON) && !p.peekTokenIs(token.COLUMN) && precedence < p.peekPrecedence() {
+		infix := p.infixParseFns[p.peekToken.Type]
+		if infix == nil {
+			return leftExp
+		}
+
+		p.nextToken()
+
+		leftExp = infix(leftExp)
+	}
+
+	return leftExp
+}
+
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expression := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+	}
+
+	p.nextToken()
+
+	expression.Right = p.parseExpression(PREFIX)
+
+	return expression
+}
+
 func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
@@ -195,29 +237,6 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	expression.Right = p.parseExpression(precedence)
 
 	return expression
-}
-
-func (p *Parser) parseExpression(precedence int) ast.Expression {
-	prefix := p.prefixParseFns[p.curToken.Type]
-	if prefix == nil {
-		p.noPrefixParseFnError(p.curToken.Type)
-		return nil
-	}
-
-	leftExp := prefix()
-
-	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
-		infix := p.infixParseFns[p.peekToken.Type]
-		if infix == nil {
-			return leftExp
-		}
-
-		p.nextToken()
-
-		leftExp = infix(leftExp)
-	}
-
-	return leftExp
 }
 
 func (p *Parser) peekPrecedence() int {
@@ -293,22 +312,6 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 
 func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
-}
-
-func (p *Parser) parseBlockStatement() *ast.BlockStatement {
-	block := &ast.BlockStatement{Token: p.curToken}
-	block.Statements = []ast.Statement{}
-
-	// p.nextToken()
-
-	for !p.peekTokenIs(token.COLUMN) && !p.peekTokenIs(token.EOF) {
-		stmt := p.parseStatement()
-		if stmt != nil {
-			block.Statements = append(block.Statements, stmt)
-		}
-		p.nextToken()
-	}
-	return block
 }
 
 // (<parameter one>,<parameter two>,<parameter three>,...)

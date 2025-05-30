@@ -58,7 +58,7 @@ func (cs *ColumnStatement) String() string {
 		out.WriteString(cs.Expressions.String())
 	}
 
-	out.WriteString(",")
+	out.WriteString(";")
 
 	return out.String()
 }

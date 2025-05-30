@@ -8,6 +8,61 @@ import (
 	"github.com/vamuscari/dyre/lexer"
 )
 
+func TestChainColumnStatement(t *testing.T) {
+	input := "foo:bar:baz:"
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	if len(query.Statements) != 3 {
+		t.Errorf("query.Statements does not contain %d statements, got=%d\n",
+			3, len(query.Statements))
+	}
+
+	for i := range query.Statements {
+		clmn, ok := query.Statements[i].(*ast.ColumnStatement)
+		if !ok {
+			t.Fatalf("query.Statements[%d] is not ast.ColumnStatement. got=%T", i, query.Statements[i])
+		}
+		if clmn.Expressions != nil {
+			t.Fatalf("query.Statements[%d].expression is not nil", i)
+		}
+	}
+}
+
+func TestChainColumnStatementWithExpression(t *testing.T) {
+	input := "foo: > 5; < 10;bar: > 0; < 3;"
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	if len(query.Statements) != 2 {
+		t.Errorf("query.Statements does not contain %d statements, got=%d\n",
+			2, len(query.Statements))
+		for i, s := range query.Statements {
+			t.Errorf("Statement[%d]: %s", i, s.String())
+		}
+	}
+
+	for i := range query.Statements {
+		clmn, ok := query.Statements[i].(*ast.ColumnStatement)
+		if !ok {
+			fmt.Printf("\n %s", query.Statements[i].TokenLiteral())
+			t.Fatalf("query.Statements[%d] is not ast.ColumnStatement. got=%T", i, query.Statements[i])
+		}
+
+		if len(clmn.Expressions.Statements) != 2 {
+			for j, es := range clmn.Expressions.Statements {
+				fmt.Errorf("Query %d. Expression %d. %s", i, j, es.String())
+			}
+			t.Fatalf("query.Statements[%d].expression.statements is not 2, got=%d", i, len(clmn.Expressions.Statements))
+		}
+
+	}
+}
+
 func TestColumnStatement(t *testing.T) {
 	input := "foo: 5; false; func(@);"
 	l := lexer.New(input)

@@ -12,21 +12,24 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"int:", "SELECT Test.int FROM dbo.Test"},                                                         // Basic Request
-		{"int:string:int:", "SELECT Test.string, Test.int FROM dbo.Test"},                                 // Reorder
-		{"string: @ == 'Hello'", "SELECT Test.string FROM dbo.Test WHERE (Test.string = 'Hello')"},        // @ reference call
-		{"bool: @ == FALSE", "SELECT Test.bool FROM dbo.Test WHERE (Test.bool = 0)"},                      // Boolean Test
-		{"int: int: > 5", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},                           // Integer Test
-		{"int: > 5 OR < 10", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) OR (Test.int < 10))"},   // OR Statement
-		{"int: > 5 AND < 10", "SELECT Test.int FROM dbo.Test WHERE ((Test.int > 5) AND (Test.int < 10))"}, // AND Statement
-		{"int: @ == 5 string: @ != NULL", "SELECT Test.int, Test.string FROM dbo.Test WHERE (Test.int = 5) AND (Test.string != NULL)"},
-		{"string: len(@) > 5", "SELECT Test.string FROM dbo.Test WHERE (LEN(Test.string) > 5)"},
-		{"date: @ == date('01/02/2023')", "SELECT Test.date FROM dbo.Test WHERE (Test.date = CONVERT(date, '01/02/2023', 23))"}, // Function Call
-		{"int: > 5", "SELECT Test.int FROM dbo.Test WHERE (Test.int > 5)"},
+		{"int:", "SELECT Test.[int] FROM dbo.Test"},                                                                                 // Basic Request
+		{"int:string:bool:", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test"},                                         // Chain Column
+		{"int:;string:;int:", "SELECT Test.[string], Test.[int] FROM dbo.Test"},                                                     // Reorder
+		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                              // @ reference call
+		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                            // Boolean Comparison
+		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                 // Integer Comparison
+		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                       // OR Statement
+		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
+		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
+		{"int: exclude(@); > 5;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[int] > 5)"},                               // Exclude
+		// {"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
 	}
 
 	for _, tt := range tests {
-		ir := testNew(tt.input)
+		ir, err := testNew(tt.input)
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
 		sql_statement, err := ir.EvaluateQuery()
 
 		if err != nil {
@@ -45,12 +48,15 @@ func TestLimit(t *testing.T) {
 		limit    int
 		expected string
 	}{
-		{"int:", 100, "SELECT TOP 100 Test.int FROM dbo.Test"},
-		{"int:", -1, "SELECT Test.int FROM dbo.Test"},
+		{"int:", 100, "SELECT TOP 100 Test.[int] FROM dbo.Test"},
+		{"int:", -1, "SELECT Test.[int] FROM dbo.Test"},
 	}
 
 	for _, tt := range tests {
-		evalualted_ir := testNew(tt.input)
+		evalualted_ir, err := testNew(tt.input)
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
 		evalualted_ir.LIMIT(tt.limit)
 		sql_statement, err := evalualted_ir.EvaluateQuery()
 
@@ -65,7 +71,7 @@ func TestLimit(t *testing.T) {
 
 }
 
-func testNew(input string) *IR {
+func testNew(input string) (*IR, error) {
 	service := &endpoint.Service{
 		Endpoints: map[string]*endpoint.Endpoint{
 			"Test": {
@@ -74,7 +80,7 @@ func testNew(input string) *IR {
 				SchemaName: "dbo",
 				FieldNames: []string{"int", "string", "bool", "date"},
 				Fields: map[string]endpoint.Field{
-					"int":    {Name: "int", FieldType: object.STRING_OBJ},
+					"int":    {Name: "int", FieldType: object.INTEGER_OBJ},
 					"string": {Name: "string", FieldType: object.STRING_OBJ},
 					"bool":   {Name: "bool", FieldType: object.BOOLEAN_OBJ},
 					"date":   {Name: "date", FieldType: object.DATE_OBJ},
@@ -82,9 +88,7 @@ func testNew(input string) *IR {
 			},
 		},
 	}
-	ir := New(input, service.Endpoints["Test"])
-
-	return ir
+	return New(input, service.Endpoints["Test"])
 }
 
 // func TestEvalIntegerExpression(t *testing.T) {

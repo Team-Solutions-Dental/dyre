@@ -37,6 +37,7 @@ type Field struct {
 	endpoint  *Endpoint
 	Name      string
 	FieldType object.ObjectType
+	Nullable  bool
 }
 
 func (f *Field) Type() object.ObjectType { return f.FieldType }

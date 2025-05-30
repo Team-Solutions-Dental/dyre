@@ -15,19 +15,23 @@ import (
 
 // Intermediate Representation
 type IR struct {
-	endpoint     *endpoint.Endpoint
-	currentField *endpoint.Field
-	ast          *ast.QueryStatements
-	sql          *sql.Query
-	joins        []*joinIR
+	endpoint               *endpoint.Endpoint
+	currentField           *endpoint.Field
+	currentSelectStatement *sql.SelectStatement
+	ast                    *ast.QueryStatements
+	sql                    *sql.Query
+	joins                  []*joinIR
 }
 
-func New(query string, endpoint *endpoint.Endpoint) *IR {
+func New(query string, endpoint *endpoint.Endpoint) (*IR, error) {
+	if endpoint == nil {
+		return nil, errors.New("No end point provided for query: " + query)
+	}
 	l := lexer.New(query)
 	p := parser.New(l)
 	q := p.ParseQuery()
-	var ir IR = IR{endpoint: endpoint, ast: q, sql: &sql.Query{}}
-	return &ir
+	var ir IR = IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}
+	return &ir, nil
 }
 
 func (ir *IR) EvaluateQuery() (string, error) {
@@ -38,17 +42,17 @@ func (ir *IR) EvaluateQuery() (string, error) {
 	return ir.sql.ConstructQuery(), nil
 }
 
-// TODO: reorder columns for select if found
 func (ir *IR) evalTable() object.Object {
-
 	if ir.endpoint.SchemaName != "" {
 		ir.sql.From = ir.endpoint.SchemaName + "." + ir.endpoint.TableName
 	} else {
 		ir.sql.From = ir.endpoint.TableName
 	}
 
+	ir.sql.TableName = ir.endpoint.TableName
+
 	for _, js := range ir.joins {
-		result := js.child_ir.evalTable()
+		result := js.childIR.evalTable()
 		if isError(result) {
 			return result
 		}
@@ -57,6 +61,21 @@ func (ir *IR) evalTable() object.Object {
 	result := eval(ir.ast, ir)
 	if isError(result) {
 		return result
+	}
+
+	for _, j := range ir.joins {
+		for _, ss := range j.childIR.sql.SelectStatements {
+			if ss.Name() == j.childOn {
+				continue
+			}
+			joinedSelect := &sql.SelectStatement{
+				FieldName: ss.FieldName,
+				TableName: &j.alias,
+				Exclude:   ss.Exclude,
+			}
+			ir.sql.SelectStatements = append(ir.sql.SelectStatements, joinedSelect)
+		}
+
 	}
 
 	return nil
@@ -129,22 +148,24 @@ func evalColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
 	column := ir.endpoint.Fields[node.TokenLiteral()]
 	ir.currentField = &column
 
-	// selectStatementLoc := ir.selectStatementLocation(ir.currentField.Name)
-	// if selectStatementLoc >= 0 {
-	// 	newSelectStatement := []*sql.selectStatement{}
-	// 	for i, ss := range ir.sql.selectStatements {
-	// 		if i != selectStatementLoc {
-	// 			newSelectStatement = append(newSelectStatement, ss)
-	// 		}
-	// 	}
-	//
-	// 	newSelectStatement = append(newSelectStatement, ir.sql.selectStatements[selectStatementLoc])
-	// 	ir.sql.selectStatements = newSelectStatement
-	//
-	// } else {
-	// 	selects := &selectStatement{fieldName: &ir.currentField.Name, tableName: &ir.endpoint.TableName}
-	// 	ir.selectStatements = append(ir.selectStatements, selects)
-	// }
+	selectStatementLoc := ir.sql.SelectStatementLocation(ir.currentField.Name)
+	if selectStatementLoc >= 0 {
+		newSelectStatementList := []*sql.SelectStatement{}
+		for i, ss := range ir.sql.SelectStatements {
+			if i != selectStatementLoc {
+				newSelectStatementList = append(newSelectStatementList, ss)
+			}
+		}
+
+		newSelectStatementList = append(newSelectStatementList, ir.sql.SelectStatements[selectStatementLoc])
+		ir.currentSelectStatement = ir.sql.SelectStatements[selectStatementLoc]
+		ir.sql.SelectStatements = newSelectStatementList
+
+	} else {
+		selects := &sql.SelectStatement{FieldName: &ir.currentField.Name, TableName: &ir.endpoint.TableName, Exclude: false}
+		ir.currentSelectStatement = selects
+		ir.sql.SelectStatements = append(ir.sql.SelectStatements, selects)
+	}
 
 	if node.Expressions != nil {
 		err := eval(node.Expressions, ir)
@@ -160,11 +181,10 @@ func evalBlockStatement(block *ast.BlockStatement, ir *IR) object.Object {
 	var result object.Object
 
 	for _, statement := range block.Statements {
-		result = eval(statement, ir)
+		if statement != nil {
+			result = eval(statement, ir)
 
-		if result != nil {
-			rt := result.Type()
-			if rt == object.ERROR_OBJ {
+			if isError(result) {
 				return result
 			}
 		}
@@ -174,6 +194,11 @@ func evalBlockStatement(block *ast.BlockStatement, ir *IR) object.Object {
 }
 
 func evalExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) object.Object {
+
+	if stmnt.Expression == nil {
+		return nil
+	}
+
 	evaluated := eval(stmnt.Expression, ir)
 	if isError(evaluated) {
 		return evaluated

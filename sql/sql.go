@@ -13,6 +13,30 @@ type Query struct {
 	WhereStatements   []string
 	JoinStatements    []*JoinStatement
 	GroupByStatements []string
+	Depth             int
+}
+
+func (q *Query) ConstructQuery() string {
+
+	var query string = "SELECT "
+
+	if q.Limit != nil && *q.Limit > 0 {
+		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
+	}
+
+	query = query + q.selectConstructor()
+
+	query = query + " FROM " + q.From
+
+	if len(q.JoinStatements) > 0 {
+		query = query + joinConstructor(q.JoinStatements)
+	}
+
+	if len(q.WhereStatements) > 0 {
+		query = query + whereConstructor(q.WhereStatements)
+	}
+
+	return query
 }
 
 func (q *Query) SelectNameList() []string {
@@ -23,13 +47,33 @@ func (q *Query) SelectNameList() []string {
 	return fields
 }
 
+func (q *Query) SelectStatementLocation(input string) int {
+	for i, ss := range q.SelectStatements {
+		if *ss.FieldName == input {
+			return i
+		}
+	}
+	return -1
+}
+
+func (q *Query) selectConstructor() string {
+	var selectStrings []string
+	for _, ss := range q.SelectStatements {
+		if !ss.Exclude || q.Depth != 0 {
+			selectStrings = append(selectStrings, ss.SelectCall())
+		}
+	}
+
+	return strings.Join(selectStrings, ", ")
+}
+
 type JoinStatement struct {
 	Parent_Query *Query
 	Child_Query  *Query
-	Parent_On    string
-	Child_On     string
-	JoinType     string
-	Alias        string
+	Parent_On    *string
+	Child_On     *string
+	JoinType     *string
+	Alias        *string
 }
 
 type SelectStatement struct {
@@ -53,44 +97,21 @@ func (ss *SelectStatement) Name() string {
 	return *ss.FieldName
 }
 
+func (js *JoinStatement) parentIrOn() string {
+	return fmt.Sprintf("%s.[%s]", js.Parent_Query.TableName, *js.Parent_On)
+}
+
+func (js *JoinStatement) joinIrOn() string {
+	return fmt.Sprintf("%s.[%s]", js.Child_Query.TableName, *js.Child_On)
+}
+
 // TODO: Append select statements from joins
-func (q *Query) ConstructQuery() string {
-
-	var query string = "SELECT "
-
-	if q.Limit != nil && *q.Limit > 0 {
-		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
-	}
-
-	query = query + selectConstructor(q.SelectStatements)
-
-	query = query + " FROM " + q.From
-
-	if len(q.JoinStatements) > 0 {
-		query = query + joinConstructor(q.JoinStatements)
-	}
-
-	if len(q.WhereStatements) > 0 {
-		query = query + whereConstructor(q.WhereStatements)
-	}
-
-	return query
-}
-
-func selectConstructor(selects []*SelectStatement) string {
-	var selectStrings []string
-	for _, ss := range selects {
-		selectStrings = append(selectStrings, ss.SelectCall())
-	}
-
-	return strings.Join(selectStrings, ", ")
-}
 
 func joinConstructor(joins []*JoinStatement) string {
 	var joinArr []string
 	for _, j := range joins {
 
-		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", j.JoinType, j.Child_Query.ConstructQuery(), j.Alias, j.parentIrOn(), j.joinIrOn()))
+		joinArr = append(joinArr, fmt.Sprintf(" %s JOIN ( %s ) AS %s ON %s = %s", *j.JoinType, j.Child_Query.ConstructQuery(), *j.Alias, j.parentIrOn(), j.joinIrOn()))
 	}
 
 	return strings.Join(joinArr, " ")
@@ -101,6 +122,7 @@ func whereConstructor(statements []string) string {
 	if len(statements) < 1 {
 		return where
 	}
+
 	if len(statements) == 1 {
 		where = fmt.Sprintf(" WHERE %s", statements[0])
 		return where
@@ -110,21 +132,4 @@ func whereConstructor(statements []string) string {
 		where = where + " AND " + statements[i]
 	}
 	return where
-}
-
-func (q *Query) SelectStatementLocation(input string) int {
-	for i, ss := range q.SelectStatements {
-		if *ss.FieldName == input {
-			return i
-		}
-	}
-	return -1
-}
-
-func (js *JoinStatement) parentIrOn() string {
-	return fmt.Sprintf("%s.[%s]", js.Parent_Query.TableName, js.Parent_On)
-}
-
-func (js *JoinStatement) joinIrOn() string {
-	return fmt.Sprintf("%s.[%s]", js.Child_Query.TableName, js.Child_On)
 }
