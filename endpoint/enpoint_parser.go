@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/vamuscari/dyre/object"
 	"github.com/vamuscari/dyre/utils"
 	"log"
 	"reflect"
@@ -89,10 +90,9 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 			}
 
 			dyre_fields[v.(string)] = Field{
-				endpoint:     endpoint,
-				Name:         v.(string),
-				DefaultField: false,
-				// TypeName:     DefaultType,
+				endpoint:  endpoint,
+				Name:      v.(string),
+				FieldType: default_type,
 				// SqlType:      "NVARCHAR(MAX)",
 			}
 		}
@@ -101,7 +101,7 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 
 			field_map := v.(map[string]interface{})
 
-			new_field := Field{endpoint: endpoint, DefaultField: false}
+			new_field := Field{endpoint: endpoint}
 
 			if name, ok := field_map["name"]; ok {
 				if nameString, ok := name.(string); ok {
@@ -121,15 +121,28 @@ func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Fie
 				continue
 			}
 
-			if required, ok := field_map["defaultField"]; ok {
-				if requiredBool, ok := required.(bool); ok {
-					new_field.DefaultField = requiredBool
+			if fieldType, ok := field_map["type"]; ok {
+				if fieldTypeString, ok := fieldType.(string); ok {
+					switch fieldTypeString {
+					case "string":
+						new_field.FieldType = object.STRING_OBJ
+					case "bool":
+						new_field.FieldType = object.BOOLEAN_OBJ
+					case "int":
+						new_field.FieldType = object.INTEGER_OBJ
+					case "float":
+						new_field.FieldType = object.FLOAT_OBJ
+					case "date":
+						new_field.FieldType = object.DATE_OBJ
+					case "datetime":
+						new_field.FieldType = object.DATETIME_OBJ
+					}
 				} else {
-					log.Printf("ERROR: Request %s, Type <defaultField> not bool on field %s\n", req, new_field.Name)
-					new_field.DefaultField = false
+					log.Printf("ERROR: Request %s, <type> not string on field %s\n", req, new_field.Name)
+					new_field.FieldType = default_type
 				}
 			} else {
-				new_field.DefaultField = false
+				new_field.FieldType = default_type
 			}
 
 			// if typeName, ok := field_map["type"]; ok {

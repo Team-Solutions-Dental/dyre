@@ -2,8 +2,11 @@ package endpoint
 
 import (
 	"errors"
-	"strings"
+
+	"github.com/vamuscari/dyre/object"
 )
+
+var default_type object.ObjectType = object.STRING_OBJ
 
 type Service struct {
 	Endpoints map[string]*Endpoint
@@ -30,21 +33,13 @@ type Endpoint struct {
 	SchemaName string
 }
 
-func (ep *Endpoint) DefaultRequest() string {
-	var request []string
-	for _, f := range ep.Fields {
-		if f.DefaultField {
-			request = append(request, f.Name+":,")
-		}
-	}
-	return strings.Join(request, "")
+type Field struct {
+	endpoint  *Endpoint
+	Name      string
+	FieldType object.ObjectType
 }
 
-type Field struct {
-	endpoint     *Endpoint
-	Name         string
-	DefaultField bool
-}
+func (f *Field) Type() object.ObjectType { return f.FieldType }
 
 func (f *Field) Endpoint() *Endpoint {
 	return f.endpoint
