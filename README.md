@@ -57,25 +57,36 @@ A field is called by its name with a colon following the name.
 fieldName:
 ```
 
-Multiple fields can be called in sequence. DyRe will respect the order in which fields were called. If the same field is called twice, it's ordered in the last position it was called.
+Multiple fields can be called in sequence. DyRe will respect the order in which fields were called. 
+If the same field is called twice, it's ordered in the last position it was called.
 ```bash
 CustomerID:Name:Active:
 ```
 
 
 ### Expressions
-Columns can use additional expressions for filtering. A boolean style expression can be given with a semicolon for the construction of a where statement.
+Columns can use additional expressions for filtering. 
+A boolean style expression can be given with a semicolon for the construction of a where statement.
 ```bash
 CustomerNumber: > 100;
-```
-```bash
+
 Active: == FALSE;
-```
-```bash
+
 CustomerNumber: > 100 AND < 200;
 ```
+Boolean expressions include:
 
-When a conditional expression is given as prefix DyRe assumes you are referencing the column as the other part of the expression. If you want to format your expression with the prefix you can declare the '@' for reference to the column name.
+- ==
+- !=
+- \>
+- <
+- \>=
+- <=
+- AND
+- OR
+
+When a conditional expression is given as prefix DyRe assumes you are referencing the column as the other part of the expression. 
+If you want to format your expression with the prefix you can declare the '@' for reference to the column name.
 ```bash
 CustomersNumber: > 200;
 # Is the same as 
@@ -84,7 +95,8 @@ CustomersNumber: @ > 200;
 CustomersNumber: 200 < @;
 ```
 
-Expressions can include builtin function calls for specific handling of fields. For example `exclude(@)` will exclude a field from the top level of the query omitting it from the returned statement.
+Expressions can include builtin function calls for specific handling of fields. 
+For example `exclude(@)` will exclude a field from the top level of the query omitting it from the returned statement.
 ```bash
 Active: exclude(@)
 ```
@@ -121,7 +133,8 @@ func main() {
 ```
 
 ### Making a handler 
-get all you params then check the values against the response. Once a response has been validated for fields and groups its pretty easy to handle the rest.
+get all you params then check the values against the response. 
+Once a response has been validated for fields and groups its pretty easy to handle the rest.
 
 ```go
 func getCustomers(c *ex.Context) {
@@ -161,9 +174,9 @@ func getCustomers(c *ex.Context) {
 
 ## Joining tables
 Joining tables as requests is possible in DyRe allowing for powerful queries from the front end.
-Each tables query is made separately so they can either be query parameters or post parameters if preferred
+Each tables query is made separately so they can either be query parameters or post parameters if preferred.
 If a field is declared in the joined table it will be included in the result unless excluded.
-The top level tables fields take precedence then joined tables fields are added after
+The top level tables fields take precedence then joined tables fields are added after.
 
 
 ```go
