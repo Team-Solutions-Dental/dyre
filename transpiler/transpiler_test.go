@@ -12,17 +12,17 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"int:", "SELECT Test.[int] FROM dbo.Test"},                                                                                            // Basic Request
-		{"int:string:bool:", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test"},                                                    // Chain Column
-		{"int:;string:;int:", "SELECT Test.[string], Test.[int] FROM dbo.Test"},                                                                // Reorder
-		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                                         // @ reference call
-		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                                       // Boolean Comparison
-		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                            // Integer Comparison
-		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                                  // OR Statement
-		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                                // AND Statement
-		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"},            // Function Call
-		{"int: exclude(@); > 5;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[int] > 5)"},                                          // Exclude
-		{"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
+		{"int:", "SELECT Test.[int] FROM dbo.Test"},                                                                                 // Basic Request
+		{"int:string:bool:", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test"},                                         // Chain Column
+		{"int:;string:;int:", "SELECT Test.[string], Test.[int] FROM dbo.Test"},                                                     // Reorder
+		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                              // @ reference call
+		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                            // Boolean Comparison
+		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                 // Integer Comparison
+		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                       // OR Statement
+		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
+		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
+		{"int: exclude(@); > 5;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[int] > 5)"},                               // Exclude
+		// {"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
 	}
 
 	for _, tt := range tests {

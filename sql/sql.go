@@ -37,6 +37,10 @@ func (q *Query) ConstructQuery() string {
 		query = query + whereConstructor(q.WhereStatements)
 	}
 
+	if q.Depth == 0 && len(q.OrderBy) > 0 {
+		query = query + orderByConstructor(q.OrderBy)
+	}
+
 	return query
 }
 
@@ -50,7 +54,11 @@ func (q *Query) SelectNameList() []string {
 
 func (q *Query) SelectStatementLocation(input string) int {
 	for i, ss := range q.SelectStatements {
-		if *ss.FieldName == input {
+		if ss.Alias != nil && *ss.Alias == input {
+			return i
+		}
+
+		if ss.FieldName != nil && *ss.FieldName == input {
 			return i
 		}
 	}
@@ -136,6 +144,23 @@ func whereConstructor(statements []string) string {
 }
 
 type OrderByStatement struct {
-	ascending bool
+	Ascending bool
 	FieldName string
+}
+
+func orderByConstructor(statements []*OrderByStatement) string {
+	if len(statements) < 1 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString(" ORDER BY ")
+	for _, ob := range statements {
+		if ob.Ascending == true {
+			sb.WriteString("ASC ")
+		} else {
+			sb.WriteString("DESC ")
+		}
+		sb.WriteString(ob.FieldName)
+	}
+	return sb.String()
 }

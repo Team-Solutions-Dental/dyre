@@ -43,7 +43,7 @@ type Parser struct {
 	curToken  token.Token
 	peekToken token.Token
 
-	errors []string
+	parserErrors []string
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
@@ -51,8 +51,8 @@ type Parser struct {
 
 func New(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l:      l,
-		errors: []string{},
+		l:            l,
+		parserErrors: []string{},
 	}
 
 	//Read two tokens for init cur and peek
@@ -76,6 +76,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.GTE, p.parseColumnPrefixExpression)
 	p.registerPrefix(token.COLUMNCALL, p.parseColumnCall)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
+	p.registerPrefix(token.ASC, p.parseOrderExpression)
+	p.registerPrefix(token.DESC, p.parseOrderExpression)
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.PLUS, p.parseInfixExpression)
@@ -186,7 +188,7 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 
 func (p *Parser) noPrefixParseFnError(t token.TokenType) {
 	msg := fmt.Sprintf("no prefix parse function for %s found", t)
-	p.errors = append(p.errors, msg)
+	p.parserErrors = append(p.parserErrors, msg)
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
@@ -274,12 +276,12 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 }
 
 func (p *Parser) Errors() []string {
-	return p.errors
+	return p.parserErrors
 }
 
 func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf("expected next token to be %s, got %s instead", t, p.peekToken.Type)
-	p.errors = append(p.errors, msg)
+	p.parserErrors = append(p.parserErrors, msg)
 }
 
 type (
@@ -301,7 +303,7 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Literal)
-		p.errors = append(p.errors, msg)
+		p.parserErrors = append(p.parserErrors, msg)
 		return nil
 	}
 
@@ -396,4 +398,12 @@ func (p *Parser) parseNullLiteral() ast.Expression {
 
 func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseOrderExpression() ast.Expression {
+	asc := true
+	if p.curTokenIs(token.DESC) {
+		asc = false
+	}
+	return &ast.OrderExpression{Token: p.curToken, Ascending: asc}
 }

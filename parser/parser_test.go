@@ -55,7 +55,7 @@ func TestChainColumnStatementWithExpression(t *testing.T) {
 
 		if len(clmn.Expressions.Statements) != 2 {
 			for j, es := range clmn.Expressions.Statements {
-				fmt.Errorf("Query %d. Expression %d. %s", i, j, es.String())
+				t.Errorf("Query %d. Expression %d. %s", i, j, es.String())
 			}
 			t.Fatalf("query.Statements[%d].expression.statements is not 2, got=%d", i, len(clmn.Expressions.Statements))
 		}
@@ -549,6 +549,30 @@ func TestStringLiteralExpression(t *testing.T) {
 
 	if literal.Value != "hello world" {
 		t.Errorf("literal.Value not %q. got=%q, ", "hello word", literal.Value)
+	}
+
+}
+
+func TestOrderExpression(t *testing.T) {
+	input := `ASC`
+
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	stmt := query.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.OrderExpression)
+	if !ok {
+		t.Fatalf("exp not *ast.StringLiteral. got=%T", stmt.Expression)
+	}
+
+	if literal.TokenLiteral() != "ASC" {
+		t.Errorf("literal not %q. got=%q, ", "hello word", literal.TokenLiteral())
+	}
+
+	if literal.Ascending != true {
+		t.Errorf("literal.Ascending not %t. got=%t, ", true, literal.Ascending)
 	}
 
 }

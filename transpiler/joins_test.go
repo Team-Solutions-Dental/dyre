@@ -15,7 +15,7 @@ func TestSingleJoins(t *testing.T) {
 		on           string
 		expected     string
 	}{
-		{"intx:,string:,", "inty:,bool:,", "intx", "inty",
+		{"intx:string:", "inty:bool:", "intx", "inty",
 			"SELECT Parent.[intx], Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT Join.[inty], Join.[bool] FROM dbo.Join ) AS Join ON Parent.[intx] = Join.[inty]",
 		},
 	}
@@ -83,25 +83,25 @@ func TestDoubleJoins(t *testing.T) {
 		input_yz string
 		expected string
 	}{
-		"x:,",
-		"x:,y:,",
-		"y:,z:,",
+		"x:",
+		"x:y:",
+		"y:z:",
 		"SELECT X.[x], XY.[y], XY.[z] FROM X INNER JOIN ( SELECT XY.[x], XY.[y], YZ.[z] FROM XY INNER JOIN ( SELECT YZ.[y], YZ.[z] FROM YZ ) AS YZ ON XY.[y] = YZ.[y] ) AS XY ON X.[x] = XY.[x]",
 	}
 
 	x, err := testNewXYZ(test.input_x)
 	if err != nil {
-		t.Errorf("Query test error. %s\n", err)
+		t.Fatalf("testNewXYZ. %s\n", err.Error())
 	}
 
 	xy, err := x.INNERJOIN("XY").ON("x", "x").Query(test.input_xy)
 	if err != nil {
-		t.Errorf("Query test error. %s\n", err)
+		t.Fatalf("INNERJOIN XY. %s\n", err.Error())
 	}
 
 	_, err = xy.INNERJOIN("YZ").ON("y", "y").Query(test.input_yz)
 	if err != nil {
-		t.Errorf("Query test error. %s\n", err)
+		t.Fatalf("INNERJOIN YZ. %s\n", err.Error())
 	}
 
 	sql, err := x.EvaluateQuery()

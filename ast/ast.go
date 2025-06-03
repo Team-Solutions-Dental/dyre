@@ -21,11 +21,11 @@ type Expression interface {
 	expressionNode()
 }
 
-type QueryStatements struct {
+type RequestStatements struct {
 	Statements []Statement
 }
 
-func (p *QueryStatements) TokenLiteral() string {
+func (p *RequestStatements) TokenLiteral() string {
 	if len(p.Statements) > 0 {
 		return p.Statements[0].TokenLiteral()
 	} else {
@@ -33,7 +33,7 @@ func (p *QueryStatements) TokenLiteral() string {
 	}
 }
 
-func (p *QueryStatements) String() string {
+func (p *RequestStatements) String() string {
 	var out bytes.Buffer
 
 	for _, c := range p.Statements {
@@ -111,6 +111,15 @@ type IntegerLiteral struct {
 func (il *IntegerLiteral) expressionNode()      {}
 func (il *IntegerLiteral) TokenLiteral() string { return il.Token.Literal }
 func (il *IntegerLiteral) String() string       { return il.Token.Literal }
+
+type OrderExpression struct {
+	Token     token.Token
+	Ascending bool
+}
+
+func (ol *OrderExpression) expressionNode()      {}
+func (ol *OrderExpression) TokenLiteral() string { return ol.Token.Literal }
+func (ol *OrderExpression) String() string       { return ol.Token.Literal }
 
 type NullLiteral struct {
 	Token token.Token

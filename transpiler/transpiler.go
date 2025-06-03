@@ -3,6 +3,7 @@ package transpiler
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/vamuscari/dyre/ast"
 	"github.com/vamuscari/dyre/endpoint"
@@ -21,10 +22,12 @@ type IR struct {
 	ast                    *ast.RequestStatements
 	sql                    *sql.Query
 	joins                  []*joinIR
+	error                  error
 }
 
 type PrimaryIR struct {
 	IR
+	orderByAST *ast.RequestStatements
 }
 
 type SubIR struct {
@@ -35,29 +38,53 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
-	l := lexer.New(query)
-	p := parser.New(l)
-	q := p.ParseQuery()
-	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}}
-	return &ir, nil
+	q, err := parse(query)
+	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint, ast: q, error: err, sql: &sql.Query{Depth: 0}}}
+	return &ir, err
 }
 
 func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
-	l := lexer.New(query)
+	q, err := parse(query)
+	var ir SubIR = SubIR{IR: IR{endpoint: endpoint, ast: q, error: err, sql: &sql.Query{Depth: 0}}}
+	return &ir, err
+}
+
+func parse(req string) (*ast.RequestStatements, error) {
+	l := lexer.New(req)
 	p := parser.New(l)
 	q := p.ParseQuery()
-	var ir SubIR = SubIR{IR: IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}}
-	return &ir, nil
+	errs := p.Errors()
+	if len(errs) > 0 {
+		var sb strings.Builder
+		sb.WriteString("Parser Errors:")
+		for _, pe := range errs {
+			sb.WriteString(pe)
+		}
+		return q, errors.New(sb.String())
+	}
+
+	return q, nil
 }
 
 func (pir *PrimaryIR) EvaluateQuery() (string, error) {
-	result := pir.evalTable()
-	if isError(result) {
-		return "", errors.New(result.String())
+	if pir.error != nil {
+		return "", pir.error
 	}
+
+	result := pir.evalTable()
+
+	if isError(result) {
+		pir.error = errors.New(result.String())
+		return "", pir.error
+	}
+
+	if pir.orderByAST != nil {
+		evalOrderBy(pir.orderByAST, &pir.IR)
+	}
+
 	return pir.sql.ConstructQuery(), nil
 }
 
