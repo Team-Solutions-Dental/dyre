@@ -1,11 +1,10 @@
 # \[Dy\]namic \[Re\]quests
 
-DyRe is a request builder for a middleware service. The intent of DyRe is to help automate selections of multiple fields without removing any functionality for handling requests. No two APIs are the same and it is impossible to know what changes are to come, so flexibility favored over ease of use. 
+DyRe is a interpreted request builder for a middleware service. The intent of DyRe is to help automate selections of multiple fields without removing any functionality for handling specific queries. No two APIs are the same and it is impossible to know what changes are to come, so flexibility favored over ease of use. 
 
 Example API request
-`curl http://localhost:8080/Customers?fields=Name,Phone&groups=Address`  
+`curl http://localhost:8080/Customers?Query=CustomerID:Active:==True`  
 - Fields are any independent SQL field.
-- Groups are a convenience for simplifying requests by returning multiple fields. (At no point have I ever just wanted City in a request lol)
 
 
 ## Setting up JSON config
@@ -13,48 +12,95 @@ Example API request
 First you will need JSON file to build with.
 The name of the request is the thing being called.
 Fields can be a string or an object with multiple params. 
+DyRe is type aware and will reject certain unmatching typed requests.
 If a type is not declared make sure to setup a default type that works for you. 
-Groups are collections of fields to help simplify requests. A group must have a name and fields. 
-The fields in a group are the same as in the base fields.
+Defaults to nullable = true and type = string
 
 ```json
 [
   {
     "name": "Customers",
     "tableName": "Customers",
+    "schemaName": "dbo",
     "fields": [
       {
-        "name": "CustomerID",
-        "required": true
+        "name": "CustomerID"
+        "nullable" : false
       },
       "Name",
-      "Phone"
-    ],
-    "groups": [
       {
-        "name": "Address",
-        "fields": [
-         "Street"
-          {
-            "name": "City"
-          },
-          {
-            "name": "State",
-          },
-          {
-            "name": "Zipcode",
-          },
-          {
-            "name": "Zipint",
-          }
-        ]
-      }
+        "name": "Active"
+        "type": "bool"
+      },
+      {
+        "name": "CreateDate"
+        "type": "date"
+      },
+      {
+        "name": "CustomerNumber"
+        "type": "int"
+      },
+      "Phone"
     ]
   }
 ]
 
 ```
+## Writing a query
+Writing a query statement calls column names then expressions.
 
+### Fields \ Columns
+
+A field is called by its name with a colon following the name.
+
+```bash
+fieldName:
+```
+
+Multiple fields can be called in sequence. DyRe will respect the order in which fields were called. If the same field is called twice, it's ordered in the last position it was called.
+```bash
+CustomerID:Name:Active:
+```
+
+
+### Expressions
+Columns can use additional expressions for filtering. A boolean style expression can be given with a semicolon for the construction of a where statement.
+```bash
+CustomerNumber: > 100;
+```
+```bash
+Active: == FALSE;
+```
+```bash
+CustomerNumber: > 100 AND < 200;
+```
+
+When a conditional expression is given as prefix DyRe assumes you are referencing the column as the other part of the expression. If you want to format your expression with the prefix you can declare the '@' for reference to the column name.
+```bash
+CustomersNumber: > 200;
+# Is the same as 
+CustomersNumber: @ > 200;
+# Is the same as
+CustomersNumber: 200 < @;
+```
+
+Expressions can include builtin function calls for specific handling of fields. For example `exclude(@)` will exclude a field from the top level of the query omitting it from the returned statement.
+```bash
+Active: exclude(@)
+```
+
+Expressions and can be given in a row for the use of multiple expressions including function calls.
+```bash
+
+Name: exclude(@); != NULL;
+```
+
+### Putting it all together
+
+Multiple fields and expression can be called. Expressions index of the most recent field called for inference.
+```bash
+CustomerID:CreateDate: > date('2025/04/03');Active: exclude(@); == FASLE;
+```
 
 ## Setting up middleware
 
@@ -74,44 +120,95 @@ func main() {
 }
 ```
 
-## Making a handler 
+### Making a handler 
 get all you params then check the values against the response. Once a response has been validated for fields and groups its pretty easy to handle the rest.
 
 ```go
-func getCustomers(g *gin.Context) {
-	fields_string, _ := g.GetQuery("fields")
-	fields := strings.Split(fields_string, ",")
+func getCustomers(c *ex.Context) {
+	query_string, ok := c.GetQuery("Query")
+    if !ok {
+      query_string = "CustomerID:Active:==True"
+    }
 
-	groups_string, _ := g.GetQuery("groups")
-	groups := strings.Split(groups_string, ",")
-	customers, ok := Re["Customers"]
-	if !ok {
-		g.String(500, "Failed to start request")
-		return
-	}
-
-	valid, err := customers.ValidateRequest(fields, groups)
+    q, err := Re.Request('Customers', query_string)
 	if err != nil {
-		g.String(400, "Failed to parse request")
+		g.String(500, "Failed to initialize request")
 		return
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s LIMIT 10", strings.Join(valid.SQLFields(), ", "), customers.TableName())
+    sql, err := q.EvaluateQuery()
+	if err != nil {
+		g.String(500, "Failed to build request")
+		return
+	}
 
-	table, err := read_db(query, valid)
+	table, err := read_db(sql)
 	if err != nil {
 		g.String(500, "Failed to make request")
 		return
 	}
 
 	output := make(map[string]any)
-	headers := valid.Headers()
+	headers := valid.FieldNames()
 
 	output["Headers"] = headers
 	output["Table"] = table
 
-	g.JSON(200, output)
+	c.JSON(200, output)
 	return
 }
 ```
 
+## Joining tables
+Joining tables as requests is possible in DyRe allowing for powerful queries from the front end.
+Each tables query is made separately so they can either be query parameters or post parameters if preferred
+If a field is declared in the joined table it will be included in the result unless excluded.
+The top level tables fields take precedence then joined tables fields are added after
+
+
+```go
+func getCustomersWithBiling(c *ex.Context) {
+	query_string, ok := c.GetQuery("Customers")
+    if !ok {
+      query_string = "CustomerID:Active:==True"
+    }
+
+	billing_string, ok := c.GetQuery("Billing")
+    if !ok {
+      query_string = "CustomerID:Balance: > 0"
+    }
+
+    q, err := Re.Request('Customers', query_string)
+	if err != nil {
+		g.String(500, "Failed to initialize request")
+		return
+	}
+
+    _, err := q.INNERJOIN("Billing").ON("CustomerID","CustomerID").Query(billing_string)
+	if err != nil {
+		g.String(500, "Failed to initialize request")
+		return
+	}
+
+    sql, err := q.EvaluateQuery()
+	if err != nil {
+		g.String(500, "Failed to build request")
+		return
+	}
+
+	table, err := read_db(sql)
+	if err != nil {
+		g.String(500, "Failed to make request")
+		return
+	}
+
+	output := make(map[string]any)
+	headers := valid.FieldNames()
+
+	output["Headers"] = headers
+	output["Table"] = table
+
+	c.JSON(200, output)
+	return
+}
+```
