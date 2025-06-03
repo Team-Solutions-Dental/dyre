@@ -46,7 +46,7 @@ type Dyre struct {
 	service *endpoint.Service
 }
 
-func (d *Dyre) Request(req string, query string) (*transpiler.IR, error) {
+func (d *Dyre) Request(req string, query string) (*transpiler.PrimaryIR, error) {
 	endpoint, ok := d.service.Endpoints[req]
 	if !ok {
 		return nil, errors.New("Invalid Endpoint. got=" + req)

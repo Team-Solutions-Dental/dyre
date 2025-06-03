@@ -1,5 +1,9 @@
 package token
 
+import (
+	"strings"
+)
+
 type TokenType string
 type Token struct {
 	Type    TokenType
@@ -48,24 +52,23 @@ const (
 	AND   = "AND"
 	OR    = "OR"
 	NULL  = "NULL"
+
+	ASC  = "ASC"
+	DESC = "DESC"
 )
 
 var keywords = map[string]TokenType{
-	"true":  TRUE,
-	"True":  TRUE,
 	"TRUE":  TRUE,
-	"false": FALSE,
-	"False": FALSE,
 	"FALSE": FALSE,
-	"null":  NULL,
-	"Null":  NULL,
 	"NULL":  NULL,
 	"AND":   AND,
 	"OR":    OR,
+	"ASC":   ASC,
+	"DESC":  DESC,
 }
 
 func LookupIdent(ident string) TokenType {
-	if tok, ok := keywords[ident]; ok {
+	if tok, ok := keywords[strings.ToUpper(ident)]; ok {
 		return tok
 	}
 	return IDENT

@@ -18,28 +18,47 @@ type IR struct {
 	endpoint               *endpoint.Endpoint
 	currentField           *endpoint.Field
 	currentSelectStatement *sql.SelectStatement
-	ast                    *ast.QueryStatements
+	ast                    *ast.RequestStatements
 	sql                    *sql.Query
 	joins                  []*joinIR
 }
 
-func New(query string, endpoint *endpoint.Endpoint) (*IR, error) {
+type PrimaryIR struct {
+	IR
+}
+
+type SubIR struct {
+	IR
+}
+
+func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
 	l := lexer.New(query)
 	p := parser.New(l)
 	q := p.ParseQuery()
-	var ir IR = IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}
+	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}}
 	return &ir, nil
 }
 
-func (ir *IR) EvaluateQuery() (string, error) {
-	result := ir.evalTable()
+func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
+	if endpoint == nil {
+		return nil, errors.New("No end point provided for query: " + query)
+	}
+	l := lexer.New(query)
+	p := parser.New(l)
+	q := p.ParseQuery()
+	var ir SubIR = SubIR{IR: IR{endpoint: endpoint, ast: q, sql: &sql.Query{Depth: 0}}}
+	return &ir, nil
+}
+
+func (pir *PrimaryIR) EvaluateQuery() (string, error) {
+	result := pir.evalTable()
 	if isError(result) {
 		return "", errors.New(result.String())
 	}
-	return ir.sql.ConstructQuery(), nil
+	return pir.sql.ConstructQuery(), nil
 }
 
 func (ir *IR) evalTable() object.Object {
@@ -83,7 +102,7 @@ func (ir *IR) evalTable() object.Object {
 
 func eval(node ast.Node, ir *IR) object.Object {
 	switch node := node.(type) {
-	case *ast.QueryStatements:
+	case *ast.RequestStatements:
 		return evalQueryStatements(node, ir)
 	case *ast.ColumnStatement:
 		return evalColumnStatement(node, ir)
@@ -122,11 +141,11 @@ func eval(node ast.Node, ir *IR) object.Object {
 	case *ast.CallExpression:
 		return evalCallExpression(node.Function.TokenLiteral(), node.Arguments, ir)
 	default:
-		return newError(fmt.Sprintf("Unknown Evaluation Type: %T", node))
+		return newError("Unknown Evaluation Type: %T", node)
 	}
 }
 
-func evalQueryStatements(node *ast.QueryStatements, ir *IR) object.Object {
+func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	var result object.Object
 
 	for _, statement := range node.Statements {
@@ -142,7 +161,7 @@ func evalQueryStatements(node *ast.QueryStatements, ir *IR) object.Object {
 
 func evalColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
 	if !utils.Array_Contains(ir.endpoint.FieldNames, node.TokenLiteral()) {
-		return newError(fmt.Sprintf("Requested column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName))
+		return newError("Requested column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName)
 	}
 
 	column := ir.endpoint.Fields[node.TokenLiteral()]
@@ -230,7 +249,7 @@ func evalBangOperatorExpression(right object.Object) object.Object {
 	case right.Type() == object.EXPRESSION_OBJ:
 		return &object.BooleanExpression{Value: fmt.Sprintf("!%s", right.String())}
 	default:
-		return newError("Invalid Bang Operator Expression " + right.String())
+		return newError("Invalid Bang Operator Expression %s", right.String())
 	}
 }
 
@@ -241,7 +260,7 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 	case right.Type() == object.EXPRESSION_OBJ:
 		return &object.Expression{ExpressionType: object.INTEGER_OBJ, Value: fmt.Sprintf("-%s", right.String())}
 	default:
-		return newError("Invalid Minus Prefix Operator Expression" + right.String())
+		return newError("Invalid Minus Prefix Operator Expression %s", right.String())
 	}
 }
 
@@ -281,7 +300,7 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 func evalColumnCall(node ast.Node, ir *IR) object.Object {
 
 	if node.TokenLiteral() != "@" {
-		return newError(fmt.Sprintf("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@"))
+		return newError("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@")
 	}
 
 	return &object.FieldCall{FieldType: ir.currentField.Type(),
@@ -317,26 +336,4 @@ func evalCallExpression(function string, exps []ast.Expression, ir *IR) object.O
 	args := evalExpressions(exps, ir)
 
 	return builtins[function](ir, args...)
-}
-
-func (ir *IR) INNERJOIN(req string) *joinType {
-	join := &joinType{joinType: "INNER", parentIR: ir, name: req}
-
-	return join
-
-}
-
-func (ir *IR) LEFTJOIN(req string) *joinType {
-	join := &joinType{joinType: "LEFT", parentIR: ir, name: req}
-
-	return join
-}
-
-func (ir *IR) FieldNames() []string {
-	return ir.sql.SelectNameList()
-}
-
-func (ir *IR) LIMIT(input int) *IR {
-	ir.sql.Limit = &input
-	return ir
 }

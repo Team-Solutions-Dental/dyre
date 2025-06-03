@@ -43,7 +43,7 @@ func TestSingleJoins(t *testing.T) {
 	}
 }
 
-func testNewParent(input string) (*IR, error) {
+func testNewParent(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
 
 	parent := &endpoint.Endpoint{
@@ -114,7 +114,7 @@ func TestDoubleJoins(t *testing.T) {
 
 }
 
-func testNewXYZ(input string) (*IR, error) {
+func testNewXYZ(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
 
 	x := endpoint.Endpoint{

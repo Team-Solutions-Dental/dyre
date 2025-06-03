@@ -5,6 +5,28 @@ import (
 	"github.com/vamuscari/dyre/sql"
 )
 
+func (ir *IR) INNERJOIN(req string) *joinType {
+	join := &joinType{joinType: "INNER", parentIR: ir, name: req}
+
+	return join
+
+}
+
+func (ir *IR) LEFTJOIN(req string) *joinType {
+	join := &joinType{joinType: "LEFT", parentIR: ir, name: req}
+
+	return join
+}
+
+func (ir *IR) FieldNames() []string {
+	return ir.sql.SelectNameList()
+}
+
+func (ir *IR) LIMIT(input int) *IR {
+	ir.sql.Limit = &input
+	return ir
+}
+
 type joinType struct {
 	joinType string
 	parentIR *IR
@@ -19,14 +41,14 @@ type joinIR struct {
 	name     string
 	alias    string
 	parentIR *IR
-	childIR  *IR
+	childIR  *SubIR
 	endpoint *endpoint.Endpoint
 	parentOn string
 	childOn  string
 	joinType string
 }
 
-func (js *joinIR) Query(query string) (*IR, error) {
+func (js *joinIR) Query(query string) (*SubIR, error) {
 
 	ep, err := js.parentIR.endpoint.Service.GetEndpoint(js.name)
 	if err != nil {
@@ -35,7 +57,7 @@ func (js *joinIR) Query(query string) (*IR, error) {
 
 	js.endpoint = ep
 
-	js.childIR, err = New(query, js.endpoint)
+	js.childIR, err = newSubIR(query, js.endpoint)
 	if err != nil {
 		return nil, err
 	}

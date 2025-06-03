@@ -100,8 +100,8 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
-func (p *Parser) ParseQuery() *ast.QueryStatements {
-	query := &ast.QueryStatements{}
+func (p *Parser) ParseQuery() *ast.RequestStatements {
+	query := &ast.RequestStatements{}
 	query.Statements = []ast.Statement{}
 
 	for p.curToken.Type != token.EOF {

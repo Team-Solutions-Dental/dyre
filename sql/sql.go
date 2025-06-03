@@ -14,6 +14,7 @@ type Query struct {
 	JoinStatements    []*JoinStatement
 	GroupByStatements []string
 	Depth             int
+	OrderBy           []*OrderByStatement
 }
 
 func (q *Query) ConstructQuery() string {
@@ -67,15 +68,6 @@ func (q *Query) selectConstructor() string {
 	return strings.Join(selectStrings, ", ")
 }
 
-type JoinStatement struct {
-	Parent_Query *Query
-	Child_Query  *Query
-	Parent_On    *string
-	Child_On     *string
-	JoinType     *string
-	Alias        *string
-}
-
 type SelectStatement struct {
 	FieldName *string
 	TableName *string
@@ -95,6 +87,15 @@ func (ss *SelectStatement) Name() string {
 		return *ss.Alias
 	}
 	return *ss.FieldName
+}
+
+type JoinStatement struct {
+	Parent_Query *Query
+	Child_Query  *Query
+	Parent_On    *string
+	Child_On     *string
+	JoinType     *string
+	Alias        *string
 }
 
 func (js *JoinStatement) parentIrOn() string {
@@ -132,4 +133,9 @@ func whereConstructor(statements []string) string {
 		where = where + " AND " + statements[i]
 	}
 	return where
+}
+
+type OrderByStatement struct {
+	ascending bool
+	FieldName string
 }
