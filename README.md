@@ -82,8 +82,8 @@ Boolean expressions include:
 - <
 - \>=
 - <=
-- AND
-- OR
+- AND or && (keep in mind & is a reserved character for query params)
+- OR or ||
 
 When a conditional expression is given as prefix DyRe assumes you are referencing the column as the other part of the expression. 
 If you want to format your expression with the prefix you can declare the '@' for reference to the column name.
