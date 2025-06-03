@@ -4,13 +4,13 @@ DyRe is a interpreted request builder for a middleware service. The intent of Dy
 
 Example API request
 `curl http://localhost:8080/Customers?Query=CustomerID:Active:==True`  
-- Fields are any independent SQL field.
 
 
 ## Setting up JSON config
 
 First you will need JSON file to build with.
 The name of the request is the thing being called.
+Fields are any independent SQL field on a table.
 Fields can be a string or an object with multiple params. 
 DyRe is type aware and will reject certain unmatching typed requests.
 If a type is not declared make sure to setup a default type that works for you. 
