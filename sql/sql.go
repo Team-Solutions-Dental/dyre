@@ -152,15 +152,16 @@ func orderByConstructor(statements []*OrderByStatement) string {
 	if len(statements) < 1 {
 		return ""
 	}
-	var sb strings.Builder
-	sb.WriteString(" ORDER BY ")
+
+	var orderByArr []string
 	for _, ob := range statements {
+		direction := ""
 		if ob.Ascending == true {
-			sb.WriteString("ASC ")
+			direction = " ASC"
 		} else {
-			sb.WriteString("DESC ")
+			direction = " DESC"
 		}
-		sb.WriteString(ob.FieldName)
+		orderByArr = append(orderByArr, ob.FieldName+direction)
 	}
-	return sb.String()
+	return (" ORDER BY " + strings.Join(orderByArr, ", "))
 }
