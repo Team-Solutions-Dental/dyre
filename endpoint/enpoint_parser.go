@@ -4,179 +4,331 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/vamuscari/dyre/object"
 	"github.com/vamuscari/dyre/utils"
-	"log"
-	"reflect"
 )
 
 func ParseJSON(b []byte) (*Service, error) {
 	// required fields
-	var m []map[string]interface{}
+	var m []map[string]any
 	err := json.Unmarshal([]byte(b), &m)
 	if err != nil {
 		return nil, err
 	}
 
 	var service Service
-	requests := make(map[string]*Endpoint)
+	endpoints := make(map[string]*Endpoint)
 
-	for i, js_request := range m {
-		if _, ok := js_request["name"]; !ok {
-			return nil, errors.New(fmt.Sprintf("No field <name> on request index %d\n", i))
+	var errs []error
+
+	for i, ep := range m {
+		newEndpoint, err := parseEndpoint(ep, &service, i)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
-
-		request := Endpoint{
-			Name:    js_request["name"].(string),
-			Service: &service,
-		}
-
-		expected_keys := []string{"name", "fields", "tableName", "schemaName"}
-		for i := range js_request {
-			if !utils.Array_Contains(expected_keys, i) {
-				fmt.Printf("WARN: Unexpected Key %s on Request %s\n", i, request.Name)
-			}
-		}
-
-		if tableName, ok := js_request["tableName"]; ok {
-			request.TableName = tableName.(string)
-		}
-
-		if schemaName, ok := js_request["schemaName"]; ok {
-			request.SchemaName = schemaName.(string)
-		}
-
-		if fields, ok := js_request["fields"]; ok {
-			request.Fields = parseDryeJSONFields(fields.([]interface{}), request.Name, &request)
-		}
-
-		if request.Fields == nil {
-			return nil, errors.New(fmt.Sprintf("No field <fields> on request  %s\n", request.Name))
-		}
-
-		fieldList := []string{}
-		for _, field := range request.Fields {
-			fieldList = append(fieldList, field.Name)
-		}
-
-		request.FieldNames = fieldList
-
-		requests[request.Name] = &request
+		endpoints[newEndpoint.Name] = newEndpoint
 	}
 
-	service.Endpoints = requests
+	service.Endpoints = endpoints
 
-	return &service, nil
+	return &service, errors.Join(errs...)
 }
 
-// check for string type,
-// check for map/object type
-// map [ name of field ] Dyre_Field.
-// map is used for faster lookup times in large arrays
-// TODO: check jsonMap to make sure field exists
-func parseDryeJSONFields(a []any, req string, endpoint *Endpoint) map[string]Field {
+func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
+	var errs []error
+	var err error
 
-	dyre_fields := map[string]Field{}
+	if _, ok := m["name"]; !ok {
+		return nil, fmt.Errorf("Endpoint at index %d has no name.", index)
+	}
 
-	for _, v := range a {
+	tableName, ok := m["tableName"]
+	if !ok {
+		return nil, fmt.Errorf("Endpoint %s at index %d has no tableName.", m["name"].(string), index)
+	}
 
-		field_type := reflect.TypeOf(v).String()
+	request := Endpoint{
+		Name:      m["name"].(string),
+		TableName: tableName.(string),
+		Service:   s,
+	}
 
-		if field_type == "string" {
-			_, check := dyre_fields[v.(string)]
-			if check {
-				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s'\n", req, v.(string))
-				continue
-			}
+	if schemaName, ok := m["schemaName"]; ok {
+		request.SchemaName = schemaName.(string)
+	}
 
-			dyre_fields[v.(string)] = Field{
-				endpoint:  endpoint,
-				Name:      v.(string),
-				FieldType: default_type,
-				// SqlType:      "NVARCHAR(MAX)",
-			}
-		}
-
-		if field_type == "map[string]interface {}" {
-
-			field_map := v.(map[string]interface{})
-
-			new_field := Field{endpoint: endpoint}
-
-			if name, ok := field_map["name"]; ok {
-				if nameString, ok := name.(string); ok {
-					new_field.Name = nameString
-				} else {
-					log.Printf("ERROR: Request %s, Type <name> not string: %v,\n", req, name)
-					continue
-				}
-			} else {
-				log.Printf("ERROR: Request %s, <name> not found: %v,\n", req, name)
-				continue
-			}
-
-			_, check := dyre_fields[new_field.Name]
-			if check {
-				fmt.Printf("WARN: Request {%s}, Duplicate Field '%s' \n", req, new_field.Name)
-				continue
-			}
-
-			if fieldType, ok := field_map["type"]; ok {
-				if fieldTypeString, ok := fieldType.(string); ok {
-					switch fieldTypeString {
-					case "string":
-						new_field.FieldType = object.STRING_OBJ
-					case "bool":
-						new_field.FieldType = object.BOOLEAN_OBJ
-					case "int":
-						new_field.FieldType = object.INTEGER_OBJ
-					case "float":
-						new_field.FieldType = object.FLOAT_OBJ
-					case "date":
-						new_field.FieldType = object.DATE_OBJ
-					case "datetime":
-						new_field.FieldType = object.DATETIME_OBJ
-					}
-				} else {
-					log.Printf("ERROR: Request %s, <type> not string on field %s\n", req, new_field.Name)
-					new_field.FieldType = default_type
-				}
-			} else {
-				new_field.FieldType = default_type
-			}
-
-			// if typeName, ok := field_map["type"]; ok {
-			// 	if typeNameString, ok := typeName.(string); ok {
-			// 		new_field.TypeName = typeNameString
-			// 	} else {
-			// 		log.Printf("ERROR: Request %s, Type <typeName> not string on field %s\n", req, new_field.Name)
-			// 		new_field.TypeName = DefaultType
-			// 	}
-			// } else {
-			// 	new_field.TypeName = DefaultType
-			// }
-
-			// if querySelect, ok := field_map["sqlSelect"]; ok {
-			// 	if querySelectString, ok := querySelect.(string); ok {
-			// 		new_field.SqlSelect = querySelectString
-			// 	} else {
-			// 		log.Printf("ERROR: Request %s, Type <querySelect> not string on field %s\n", req, new_field.Name)
-			// 		new_field.SqlSelect = new_field.Name
-			// 	}
-			// } else {
-			// 	new_field.SqlSelect = new_field.Name
-			// }
-
-			expected_keys := []string{"name", "defaultField"}
-			for i := range field_map {
-				if !utils.Array_Contains(expected_keys, i) {
-					fmt.Printf("WARN: Request %s, Unexpected Key %s on Field %s\n", req, i, new_field.Name)
-				}
-			}
-
-			dyre_fields[new_field.Name] = new_field
+	if fields, ok := m["fields"]; ok {
+		request.Fields, err = parseEndpointFields(fields.([]any), &request)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("Fields: %w", err))
 		}
 	}
 
-	return dyre_fields
+	if joins, ok := m["joins"]; ok {
+		request.Joins, err = parseEndpointJoins(joins.([]any), &request)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("Joins: %w", err))
+		}
+	}
+
+	if request.Fields == nil {
+		return nil, errors.New(fmt.Sprintf("No field <fields> on request  %s\n", request.Name))
+	}
+
+	fieldList := []string{}
+	for _, field := range request.Fields {
+		fieldList = append(fieldList, field.Name)
+	}
+
+	request.FieldNames = fieldList
+
+	expected_keys := []string{"name", "fields", "tableName", "schemaName", "joins"}
+	for i := range m {
+		if !utils.Array_Contains(expected_keys, i) {
+			errs = append(errs, fmt.Errorf("Unexpected key %s", i))
+		}
+	}
+
+	if errs != nil {
+		err = fmt.Errorf("Endpoint %s at index %d, %w", request.Name, index, errors.Join(errs...))
+		return &request, err
+	}
+
+	return &request, nil
+}
+
+func parseEndpointFields(a []any, endpoint *Endpoint) (map[string]Field, error) {
+	fields := map[string]Field{}
+	var errs []error
+
+	for _, jsonField := range a {
+		field, err := parseField(jsonField, endpoint)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		_, check := fields[field.Name]
+		if check {
+			errs = append(errs, fmt.Errorf("Duplicate field %s", field.Name))
+			continue
+		}
+
+		fields[field.Name] = field
+	}
+
+	return fields, errors.Join(errs...)
+}
+
+func parseField(f any, e *Endpoint) (Field, error) {
+
+	newField := Field{
+		endpoint:  e,
+		FieldType: default_type,
+		Nullable:  true,
+	}
+
+	switch f := f.(type) {
+	case string:
+		newField.Name = f
+		return newField, nil
+	case map[string]any:
+		var err error
+		newField.Name, err = parseString(f, "name")
+		if err != nil {
+			return newField, err
+		}
+
+		var errs []error
+
+		errs = append(errs, err)
+		newField.FieldType, err = parseFieldType(f, default_type)
+		errs = append(errs, err)
+
+		newField.Nullable, err = parseNullable(f, true)
+		errs = append(errs, err)
+
+		expected_keys := []string{"name", "type", "nullable"}
+		for i := range f {
+			if !utils.Array_Contains(expected_keys, i) {
+				errs = append(errs,
+					fmt.Errorf("Unexpected key %s", i),
+				)
+			}
+		}
+
+		err = errors.Join(errs...)
+
+		if err != nil {
+			err = fmt.Errorf("Field %s, %w", newField.Name, err)
+			return newField, err
+		}
+
+		return newField, nil
+
+	default:
+		return newField, fmt.Errorf("Field JSON type invalid. got = %T", f)
+	}
+
+}
+
+func parseFieldType(field_map map[string]any, default_type object.ObjectType) (object.ObjectType, error) {
+	fieldType, ok := field_map["type"]
+	if !ok {
+		return default_type, nil
+	}
+	str, ok := fieldType.(string)
+	if !ok {
+		return default_type, errors.New(fmt.Sprintf("'type' not string. got=%T", fieldType))
+	}
+	convertedType, err := typeConvert(str)
+	if err != nil {
+		return default_type, err
+	}
+	return convertedType, nil
+}
+
+func parseNullable(field_map map[string]any, def bool) (bool, error) {
+	fieldType, ok := field_map["nullable"]
+	if !ok {
+		return def, nil
+	}
+	bool, ok := fieldType.(bool)
+	if !ok {
+		return def, errors.New(fmt.Sprintf("'nullable' not boolean. got=%T", fieldType))
+	}
+
+	return bool, nil
+}
+
+func parseEndpointJoins(a []any, e *Endpoint) (map[string]Join, error) {
+
+	joins := map[string]Join{}
+	var errs []error
+
+	for _, join := range a {
+		newJoin, err := parseJoin(join, e)
+
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		_, check := joins[newJoin.childEndpointName]
+		if check {
+			errs = append(errs, fmt.Errorf("Duplicate join %s", newJoin.childEndpointName))
+			continue
+		}
+
+		joins[newJoin.childEndpointName] = newJoin
+	}
+
+	return joins, errors.Join(errs...)
+}
+
+func parseJoin(a any, e *Endpoint) (Join, error) {
+	newJoin := Join{parentEndpoint: e}
+
+	m, ok := a.(map[string]any)
+	if !ok {
+		return newJoin, fmt.Errorf("Invalid 'join' JSON type %T", a)
+	}
+
+	var err error
+	newJoin.childEndpointName, err = parseString(m, "endpoint")
+	if err != nil {
+		return newJoin, err
+	}
+
+	var errs []error
+	ons, err := parseJoinOn(m)
+	errs = append(errs, err)
+	newJoin.Parent_ON = ons[0]
+	newJoin.Child_ON = ons[1]
+
+	expected_keys := []string{"endpoint", "on"}
+	for i := range m {
+		if !utils.Array_Contains(expected_keys, i) {
+			errs = append(errs, fmt.Errorf("Unexpected key %s", i))
+		}
+	}
+
+	err = errors.Join(errs...)
+	if err != nil {
+		err = fmt.Errorf("Join %s, %w", newJoin.childEndpointName, err)
+	}
+
+	return newJoin, err
+}
+
+func parseJoinOn(m map[string]any) ([2]string, error) {
+	var output [2]string
+	o, ok := m["on"]
+	if !ok {
+		return output, errors.New("Missing 'on'")
+	}
+
+	switch o := o.(type) {
+	case string:
+		output[0] = o
+		output[1] = o
+	case []any:
+		if len(o) != 2 {
+			return output, fmt.Errorf("On array length is not two. [ParentON, ChildOn]. got %d", len(o))
+		}
+		var ok bool
+		if output[0], ok = o[0].(string); !ok {
+			return output, fmt.Errorf("On array[%d] not string. got %T", 0, o[0])
+		}
+		if output[1], ok = o[1].(string); !ok {
+			return output, fmt.Errorf("On array[%d] not string. got %T", 1, o[1])
+		}
+	default:
+		return output, fmt.Errorf("Invalid 'on' JSON type %T", o)
+	}
+	return output, nil
+}
+
+func parseString(m map[string]any, index string) (string, error) {
+	n, ok := m[index]
+	if !ok {
+		return "", fmt.Errorf("Missing %s", index)
+	}
+	str, ok := n.(string)
+	if !ok {
+		return "", fmt.Errorf("'%s' not string. got=%T", index, n)
+	}
+
+	return str, nil
+}
+
+func typeConvert(input string) (object.ObjectType, error) {
+	var output object.ObjectType
+	compare := strings.ToUpper(input)
+
+	switch compare {
+	case "STRING":
+		output = object.STRING_OBJ
+	case "BOOL":
+		output = object.BOOLEAN_OBJ
+	case "BOOLEAN":
+		output = object.BOOLEAN_OBJ
+	case "INT":
+		output = object.INTEGER_OBJ
+	case "INTEGER":
+		output = object.INTEGER_OBJ
+	case "FLOAT":
+		output = object.FLOAT_OBJ
+	case "DATE":
+		output = object.DATE_OBJ
+	case "DATETIME":
+		output = object.DATETIME_OBJ
+	default:
+		return output, errors.New("Unknown Type " + input)
+	}
+
+	return output, nil
 }

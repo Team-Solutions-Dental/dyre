@@ -54,3 +54,12 @@ func (d *Dyre) Request(req string, query string) (*transpiler.PrimaryIR, error) 
 
 	return transpiler.New(query, endpoint)
 }
+
+func (d *Dyre) EndpointNames() []string {
+	var names []string
+	for k := range d.service.Endpoints {
+		names = append(names, k)
+	}
+
+	return names
+}
