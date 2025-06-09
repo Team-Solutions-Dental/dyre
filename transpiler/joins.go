@@ -1,9 +1,36 @@
 package transpiler
 
 import (
+	"fmt"
 	"github.com/vamuscari/dyre/endpoint"
 	"github.com/vamuscari/dyre/sql"
+	"strings"
 )
+
+func (ir *IR) AUTOJOIN(joinPrefix string, joinEndpointName string) (*joinIR, error) {
+	endpointJoin, ok := ir.endpoint.Joins[joinEndpointName]
+	if !ok {
+		return nil, fmt.Errorf("Auto Join, Endpoint %s does not contain join %s", ir.endpoint.Name, joinEndpointName)
+	}
+
+	joinPrefix, err := JoinPrefixEval(joinPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("Auto join %s, %w", joinEndpointName, err)
+	}
+
+	autojoin := &joinIR{
+		joinType: joinPrefix,
+		parentIR: ir,
+		name:     joinEndpointName,
+		parentOn: endpointJoin.Parent_ON,
+		childOn:  endpointJoin.Child_ON,
+		endpoint: endpointJoin.ChildEndpoint(),
+		alias:    joinEndpointName,
+	}
+
+	return autojoin, nil
+
+}
 
 func (ir *IR) INNERJOIN(req string) *joinType {
 	join := &joinType{joinType: "INNER", parentIR: ir, name: req}
@@ -34,7 +61,14 @@ type joinType struct {
 }
 
 func (jt *joinType) ON(parent_on, on string) *joinIR {
-	return &joinIR{joinType: jt.joinType, parentIR: jt.parentIR, parentOn: parent_on, childOn: on, name: jt.name, alias: jt.name}
+	return &joinIR{
+		joinType: jt.joinType,
+		parentIR: jt.parentIR,
+		parentOn: parent_on,
+		childOn:  on,
+		name:     jt.name,
+		alias:    jt.name,
+	}
 }
 
 type joinIR struct {
@@ -83,4 +117,21 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 	}
 
 	return js.childIR, nil
+}
+
+func JoinPrefixEval(input string) (string, error) {
+	input = strings.ToUpper(input)
+	switch input {
+	case "INNER":
+		return "INNER", nil
+	case "LEFT":
+		return "INNER", nil
+	case "RIGHT":
+		return "RIGHT", nil
+	case "FULL":
+		return "FULL", nil
+	default:
+		return "INNER", fmt.Errorf("Invalid Join Prefix %s", input)
+	}
+
 }

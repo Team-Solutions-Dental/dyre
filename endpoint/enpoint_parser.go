@@ -32,6 +32,24 @@ func ParseJSON(b []byte) (*Service, error) {
 		endpoints[newEndpoint.Name] = newEndpoint
 	}
 
+	for _, ep := range endpoints {
+		if len(ep.Joins) > 0 {
+			for _, join := range ep.Joins {
+				childEndpoint, ok := endpoints[join.childEndpointName]
+				if !ok {
+					errs = append(errs,
+						fmt.Errorf("Endpoint '%s', Join '%s'. join.childEndpointName is not found in other endpoints",
+							ep.Name,
+							join.childEndpointName))
+					continue
+				}
+
+				join.childEndpoint = childEndpoint
+
+			}
+		}
+	}
+
 	service.Endpoints = endpoints
 
 	return &service, errors.Join(errs...)

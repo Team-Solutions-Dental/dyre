@@ -212,11 +212,11 @@ func TestParseJSON(t *testing.T) {
 		}
 	}
 
-	fmt.Println(" ")
+	fmt.Println("Matched JSON")
 	fmt.Println(matched)
-	fmt.Println(" ")
+	fmt.Println("Expected JSON Diff")
 	fmt.Println(diff1)
-	fmt.Println(" ")
+	fmt.Println("Evaluated JSON Diff")
 	fmt.Println(diff2)
 }
 

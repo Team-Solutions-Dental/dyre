@@ -140,9 +140,13 @@ func (j *Join) JSON() string {
 	return out.String()
 }
 
-// func (j *Join) Endpoint() *Endpoint {
-// 	return j.endpoint
-// }
+func (j *Join) ParentEndpoint() *Endpoint {
+	return j.parentEndpoint
+}
+
+func (j *Join) ChildEndpoint() *Endpoint {
+	return j.childEndpoint
+}
 
 func sortedMapKeys[T any](m map[string]T) []string {
 	keys := []string{}
