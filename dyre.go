@@ -64,19 +64,6 @@ func (d *Dyre) EndpointNames() []string {
 	return names
 }
 
-// ["Customers"]
-// ["Customers", "Invoices"]
-func (d *Dyre) AllEndpointsPaths(depth int) [][]string {
-	var endpoints [][]string
-	for _, ep := range d.service.Endpoints {
-		endpoints = append(endpoints, EndpointPaths(ep, []string{}, 0, depth)...)
-	}
-
-	return endpoints
-}
-
-func EndpointPaths(ep *Endpoint, currpath []string, depth int, depthStop int) [][]string {
-	path := append(currpath, *ep)
-	paths := [][]string
-
+func (d *Dyre) AllEndpointPaths(depth int) [][]string {
+	return d.service.AllEndpointPaths(depth)
 }
