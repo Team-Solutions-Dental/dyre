@@ -52,16 +52,16 @@ func TestParseJSON(t *testing.T) {
     "schemaName": "dbo",
     "joins": [
       {
-        "endpoint": "Customers",
+        "endpoint": "Sales",
         "on": [
-          "CustomerID",
-          "CustomerID"
+          "SaleID",
+          "SaleID"
         ]
       }
     ],
     "fields": [
       {
-        "name": "CustomerID",
+        "name": "SaleID",
         "nullable": false
       },
       {
@@ -77,7 +77,41 @@ func TestParseJSON(t *testing.T) {
         "type": "date"
       }
     ]
+  },
+  {
+    "name": "Sales",
+    "tableName": "Invoices",
+    "schemaName": "dbo",
+    "joins": [
+      {
+        "endpoint": "Customers",
+        "on": "CustomerID"
+      },
+      {
+        "endpoint": "Invoices",
+        "on": "SaleID"
+      }
+    ],
+    "fields": [
+      {
+        "name": "CustomerID",
+        "nullable": false
+      },
+      {
+        "name": "SaleID",
+        "type": "float"
+      },
+      {
+        "name": "CreateDate",
+        "type": "date"
+      },
+      {
+        "name": "Charge",
+        "type": "float"
+      }
+    ]
   }
+
 ]
 `
 
@@ -173,6 +207,11 @@ func TestParseJSON(t *testing.T) {
 		t.Fatalf(`error: %v`, err)
 	}
 
+	// paths := service.AllEndpointsPaths(2)
+	// for _, p := range paths {
+	// 	fmt.Println(strings.Join(p, "/"))
+	// }
+
 	expected_endpoints := []string{"Customers", "Invoices"}
 	for _, expected_endpoint := range expected_endpoints {
 		_, ok := service.Endpoints[expected_endpoint]
@@ -191,11 +230,14 @@ func TestParseJSON(t *testing.T) {
 		t.Errorf("evaluated JSON did not match expected JSON\n\nexpected:\n%s\n\nevaluated:\n%s\n\n", comparableJSON, evaluatedJSON)
 	}
 
+}
+
+func diffStrings(str1, str2 string) {
 	var matchLen int
-	if len(comparableJSON) > len(evaluatedJSON) {
-		matchLen = len(evaluatedJSON)
+	if len(str1) > len(str2) {
+		matchLen = len(str2)
 	} else {
-		matchLen = len(comparableJSON)
+		matchLen = len(str1)
 	}
 	matchBreak := true
 	matched := ""
@@ -203,12 +245,12 @@ func TestParseJSON(t *testing.T) {
 	diff2 := ""
 
 	for i := range matchLen {
-		if matchBreak && comparableJSON[i] == evaluatedJSON[i] {
-			matched = matched + string(comparableJSON[i])
+		if matchBreak && str1[i] == str2[i] {
+			matched = matched + string(str1[i])
 		} else {
 			matchBreak = false
-			diff1 = diff1 + string(comparableJSON[i])
-			diff2 = diff2 + string(evaluatedJSON[i])
+			diff1 = diff1 + string(str1[i])
+			diff2 = diff2 + string(str2[i])
 		}
 	}
 

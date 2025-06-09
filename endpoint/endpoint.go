@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/utils"
 )
 
 var default_type object.ObjectType = object.STRING_OBJ
@@ -45,6 +46,49 @@ func (s *Service) GetEndpoint(req string) (*Endpoint, error) {
 		return nil, errors.New("Invalid Endpoint. got=" + req)
 	}
 	return endpoint, nil
+}
+
+// ["Customers"]
+// ["Customers", "Invoices"]
+func (s *Service) AllEndpointPaths(depth int) [][]string {
+	var endpoints [][]string
+	for _, ep := range s.Endpoints {
+		new_path := []string{}
+		endpoints = append(endpoints, EndpointPaths(ep, new_path, 0, depth)...)
+	}
+
+	return endpoints
+}
+
+func EndpointPaths(endpoint *Endpoint, currpath []string, depth int, depthStop int) [][]string {
+	path := append(currpath, endpoint.Name)
+	subPaths := [][]string{}
+	subPaths = append(subPaths, []string{endpoint.Name})
+
+	if depth >= depthStop {
+		return subPaths
+	}
+
+	if len(endpoint.Joins) < 1 {
+		return subPaths
+	}
+
+	for _, j := range endpoint.Joins {
+		if utils.Array_Contains(path, j.childEndpointName) {
+			continue
+		}
+
+		if j.ChildEndpoint() == nil {
+			continue
+		}
+
+		for _, p := range EndpointPaths(j.ChildEndpoint(), path, (depth + 1), depthStop) {
+			new_path := append([]string{endpoint.Name}, p...)
+			subPaths = append(subPaths, new_path)
+		}
+	}
+
+	return subPaths
 }
 
 type Endpoint struct {

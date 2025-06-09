@@ -45,6 +45,7 @@ func ParseJSON(b []byte) (*Service, error) {
 				}
 
 				join.childEndpoint = childEndpoint
+				ep.Joins[join.childEndpointName] = join
 
 			}
 		}
