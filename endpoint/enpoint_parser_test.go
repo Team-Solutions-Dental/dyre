@@ -266,7 +266,7 @@ func deepEqualStringArray(arr1 []string, arr2 []string) []error {
 	errors := []error{}
 	for _, k := range arr1 {
 		if !utils.Array_Contains(arr2, k) {
-			errors = append(errors, fmt.Errorf("%s not found in %v\n", k, arr2))
+			errors = append(errors, fmt.Errorf("%s not found in %v\n", k, arr2)
 		}
 	}
 	for _, k := range arr2 {

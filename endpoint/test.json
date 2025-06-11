@@ -1,0 +1,84 @@
+[
+  {
+    "name": "Customers",
+    "tableName": "Customers",
+    "schemaName": "dbo",
+    "joins": [
+      {
+        "endpoint": "Invoices",
+        "on": [
+          "CustomerID",
+          "CustomerID"
+        ]
+      }
+    ],
+    "fields": [
+      {
+        "name": "CustomerID",
+        "type": "STRING",
+        "nullable": false
+      },
+      {
+        "name": "Zip",
+        "type": "INTEGER",
+        "nullable": true
+      },
+      {
+        "name": "FirstName",
+        "type": "STRING",
+        "nullable": true
+      },
+      {
+        "name": "LastName",
+        "type": "STRING",
+        "nullable": true
+      },
+      {
+        "name": "CreateDate",
+        "type": "DATE",
+        "nullable": true
+      },
+      {
+        "name": "Active",
+        "type": "BOOLEAN",
+        "nullable": true
+      }
+    ]
+  },
+  {
+    "name": "Invoices",
+    "tableName": "Invoices",
+    "schemaName": "dbo",
+    "joins": [
+      {
+        "endpoint": "Customers",
+        "on": [
+          "CustomerID",
+          "CustomerID"
+        ]
+      }
+    ],
+    "fields": [
+      {
+        "name": "CustomerID",
+        "type": "STRING",
+        "nullable": false
+      },
+      {
+        "name": "Balance",
+        "type": "FLOAT",
+        "nullable": true
+      },
+      {
+        "name": "InvoiceNumber",
+        "type": "INTEGER",
+        "nullable": true
+      },
+      {
+        "name": "CreateDate",
+        "type": "DATE",
+        "nullable": true
+      }
+    ]
+  }
+]
