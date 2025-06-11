@@ -34,6 +34,8 @@ type SubIR struct {
 	IR
 }
 
+// Entry into transpiler package
+// Create a new query
 func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
@@ -43,6 +45,7 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	return &ir, err
 }
 
+// Sub IR is missing methods exclusive to top level query
 func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
@@ -293,8 +296,8 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
 	switch {
-	case left.Type() != right.Type():
-		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
+	// case left.Type() != right.Type():
+	// 	return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	case operator == "==":
 		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
 			Value: fmt.Sprintf("(%s = %s)", left.String(), right.String())}
