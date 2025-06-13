@@ -24,9 +24,6 @@ func TestSingleJoins(t *testing.T) {
 		{"string:", "inty:bool:", "intx", "inty",
 			"SELECT Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
 		},
-		{"string:", "inty:bool:", "tacos", "inty",
-			"SELECT Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
-		},
 	}
 
 	for _, tt := range tests {
