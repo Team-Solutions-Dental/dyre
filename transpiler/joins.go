@@ -45,10 +45,6 @@ func (ir *IR) LEFTJOIN(req string) *joinType {
 	return join
 }
 
-func (ir *IR) FieldNames() []string {
-	return ir.sql.SelectNameList()
-}
-
 func (ir *IR) LIMIT(input int) *IR {
 	ir.sql.Limit = &input
 	return ir
