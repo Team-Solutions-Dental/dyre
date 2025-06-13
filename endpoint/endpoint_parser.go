@@ -141,7 +141,7 @@ func parseEndpointFields(a []any, endpoint *Endpoint) (map[string]Field, []strin
 func parseField(f any, e *Endpoint) (Field, error) {
 
 	newField := Field{
-		endpoint:  e,
+		Endpoint:  e,
 		FieldType: default_type,
 		Nullable:  true,
 	}

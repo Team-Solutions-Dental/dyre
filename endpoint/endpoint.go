@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/sql"
 	"github.com/vamuscari/dyre/utils"
 )
 
@@ -146,7 +147,7 @@ func (e *Endpoint) TS() string {
 
 type Field struct {
 	Node
-	endpoint  *Endpoint
+	Endpoint  *Endpoint
 	Name      string
 	FieldType object.ObjectType
 	Nullable  bool
@@ -154,7 +155,6 @@ type Field struct {
 
 func (f *Field) Type() object.ObjectType { return f.FieldType }
 
-func (f *Field) Endpoint() *Endpoint { return f.endpoint }
 func (f *Field) JSON() string {
 	var out bytes.Buffer
 	out.WriteString("{")
@@ -180,6 +180,14 @@ func (f *Field) TS() string {
 	out.WriteString(";")
 
 	return out.String()
+}
+
+func (f *Field) SelectStatement() *sql.SelectStatement {
+	return &sql.SelectStatement{
+		FieldName: &f.Name,
+		TableName: &f.Endpoint.TableName,
+		Exclude:   f.Nullable,
+	}
 }
 
 // Maybe reference pointer to field?

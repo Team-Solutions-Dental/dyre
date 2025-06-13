@@ -111,6 +111,7 @@ func (ir *IR) evalTable() object.Object {
 		if isError(result) {
 			return result
 		}
+
 	}
 
 	result := eval(ir.ast, ir)
@@ -131,6 +132,10 @@ func (ir *IR) evalTable() object.Object {
 			ir.sql.SelectStatements = append(ir.sql.SelectStatements, joinedSelect)
 		}
 
+		err := j.Check()
+		if err != nil {
+			return newError("%s", err.Error())
+		}
 	}
 
 	return nil

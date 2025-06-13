@@ -105,6 +105,12 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 		Alias:        &js.name,
 	}
 
+	if js.parentIR.sql.SelectStatements == nil {
+
+	} else {
+		js.parentIR.sql.JoinStatements = append(js.parentIR.sql.JoinStatements, joinStmnt)
+	}
+
 	if js.parentIR.sql.JoinStatements == nil {
 		js.parentIR.sql.JoinStatements = []*sql.JoinStatement{joinStmnt}
 	} else {
@@ -112,6 +118,27 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 	}
 
 	return js.childIR, nil
+}
+
+// Make sure that the select statement needed for joining is on the child table
+func (js *joinIR) Check() error {
+	childLoc := js.childIR.sql.SelectStatementLocation(js.childOn)
+	if childLoc < 0 {
+		childField := js.childIR.endpoint.Fields[js.childOn]
+		ss := childField.SelectStatement()
+		ss.Exclude = true
+		js.childIR.sql.SelectStatements = append(js.childIR.sql.SelectStatements, ss)
+	}
+
+	parentLoc := js.parentIR.sql.SelectStatementLocation(js.parentOn)
+	if parentLoc < 0 {
+		_, ok := js.parentIR.endpoint.Fields[js.parentOn]
+		if !ok {
+			return fmt.Errorf("No field '%s' found to join on endpoint '%s'", js.parentOn, js.parentIR.endpoint.Name)
+		}
+	}
+
+	return nil
 }
 
 func JoinPrefixEval(input string) (string, error) {

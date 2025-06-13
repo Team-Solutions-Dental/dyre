@@ -18,6 +18,15 @@ func TestSingleJoins(t *testing.T) {
 		{"intx:string:", "inty:bool:", "intx", "inty",
 			"SELECT Parent.[intx], Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
 		},
+		{"intx:string:", "bool:", "intx", "inty",
+			"SELECT Parent.[intx], Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[bool], JoinTable.[inty] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
+		},
+		{"string:", "inty:bool:", "intx", "inty",
+			"SELECT Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
+		},
+		{"string:", "inty:bool:", "tacos", "inty",
+			"SELECT Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
+		},
 	}
 
 	for _, tt := range tests {
@@ -52,11 +61,11 @@ func testNewParent(input string) (*PrimaryIR, error) {
 		TableName:  "Parent",
 		SchemaName: "dbo",
 		FieldNames: []string{"intx", "string"},
-		Fields: map[string]endpoint.Field{
-			"intx":   {Name: "intx", FieldType: object.INTEGER_OBJ},
-			"string": {Name: "string", FieldType: object.STRING_OBJ},
-		},
+		Fields:     map[string]endpoint.Field{},
 	}
+
+	parent.Fields["intx"] = endpoint.Field{Endpoint: parent, Name: "intx", FieldType: object.INTEGER_OBJ}
+	parent.Fields["string"] = endpoint.Field{Endpoint: parent, Name: "string", FieldType: object.STRING_OBJ}
 
 	join := &endpoint.Endpoint{
 		Service:    service,
@@ -64,11 +73,11 @@ func testNewParent(input string) (*PrimaryIR, error) {
 		TableName:  "JoinTable",
 		SchemaName: "dbo",
 		FieldNames: []string{"inty", "bool"},
-		Fields: map[string]endpoint.Field{
-			"inty": {Name: "inty", FieldType: object.INTEGER_OBJ},
-			"bool": {Name: "bool", FieldType: object.BOOLEAN_OBJ},
-		},
+		Fields:     map[string]endpoint.Field{},
 	}
+
+	join.Fields["inty"] = endpoint.Field{Endpoint: join, Name: "inty", FieldType: object.INTEGER_OBJ}
+	join.Fields["bool"] = endpoint.Field{Endpoint: join, Name: "bool", FieldType: object.BOOLEAN_OBJ}
 
 	service.Endpoints["Parent"] = parent
 	service.Endpoints["Join"] = join
