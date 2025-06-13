@@ -96,3 +96,7 @@ func (e *Endpoint) Joins() []string {
 	}
 	return joins
 }
+
+func (e *Endpoint) TypeScript() string {
+	return e.ref.TS()
+}
