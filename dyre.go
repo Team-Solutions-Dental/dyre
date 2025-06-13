@@ -46,6 +46,15 @@ type Dyre struct {
 	service *endpoint.Service
 }
 
+func (d *Dyre) Endpoint(req string) (*Endpoint, error) {
+	endpoint, ok := d.service.Endpoints[req]
+	if !ok {
+		return nil, errors.New("Invalid Endpoint. got=" + req)
+	}
+
+	return &Endpoint{ref: endpoint}, nil
+}
+
 func (d *Dyre) Request(req string, query string) (*transpiler.PrimaryIR, error) {
 	endpoint, ok := d.service.Endpoints[req]
 	if !ok {
@@ -66,4 +75,24 @@ func (d *Dyre) EndpointNames() []string {
 
 func (d *Dyre) AllEndpointPaths(depth int) [][]string {
 	return d.service.AllEndpointPaths(depth)
+}
+
+type Endpoint struct {
+	ref *endpoint.Endpoint
+}
+
+func (e *Endpoint) Request(query string) (*transpiler.PrimaryIR, error) {
+	return transpiler.New(query, e.ref)
+}
+
+func (e *Endpoint) Fields() []string {
+	return e.ref.FieldNames
+}
+
+func (e *Endpoint) Joins() []string {
+	var joins []string
+	for _, j := range e.ref.Joins {
+		joins = append(joins, j.Name())
+	}
+	return joins
 }

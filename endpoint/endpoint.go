@@ -184,6 +184,10 @@ func (j *Join) JSON() string {
 	return out.String()
 }
 
+func (j *Join) Name() string {
+	return j.childEndpointName
+}
+
 func (j *Join) ParentEndpoint() *Endpoint {
 	return j.parentEndpoint
 }
