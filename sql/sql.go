@@ -111,7 +111,7 @@ func (js *JoinStatement) parentIrOn() string {
 }
 
 func (js *JoinStatement) joinIrOn() string {
-	return fmt.Sprintf("%s.[%s]", js.Child_Query.TableName, *js.Child_On)
+	return fmt.Sprintf("%s.[%s]", *js.Alias, *js.Child_On)
 }
 
 // TODO: Append select statements from joins

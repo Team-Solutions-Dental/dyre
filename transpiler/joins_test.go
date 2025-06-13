@@ -16,7 +16,7 @@ func TestSingleJoins(t *testing.T) {
 		expected     string
 	}{
 		{"intx:string:", "inty:bool:", "intx", "inty",
-			"SELECT Parent.[intx], Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT Join.[inty], Join.[bool] FROM dbo.Join ) AS Join ON Parent.[intx] = Join.[inty]",
+			"SELECT Parent.[intx], Parent.[string], Join.[bool] FROM dbo.Parent INNER JOIN ( SELECT JoinTable.[inty], JoinTable.[bool] FROM dbo.JoinTable ) AS Join ON Parent.[intx] = Join.[inty]",
 		},
 	}
 
@@ -61,7 +61,7 @@ func testNewParent(input string) (*PrimaryIR, error) {
 	join := &endpoint.Endpoint{
 		Service:    service,
 		Name:       "Join",
-		TableName:  "Join",
+		TableName:  "JoinTable",
 		SchemaName: "dbo",
 		FieldNames: []string{"inty", "bool"},
 		Fields: map[string]endpoint.Field{
