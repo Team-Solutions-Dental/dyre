@@ -91,6 +91,12 @@ func (pir *PrimaryIR) EvaluateQuery() (string, error) {
 	return pir.sql.ConstructQuery(), nil
 }
 
+// Return a list of names for headers
+// Run Evaluate Query First!
+func (pir *PrimaryIR) FieldNames() []string {
+	return pir.sql.SelectNameList()
+}
+
 func (ir *IR) evalTable() object.Object {
 	if ir.endpoint.SchemaName != "" {
 		ir.sql.From = ir.endpoint.SchemaName + "." + ir.endpoint.TableName

@@ -47,7 +47,9 @@ func (q *Query) ConstructQuery() string {
 func (q *Query) SelectNameList() []string {
 	var fields []string
 	for _, ss := range q.SelectStatements {
-		fields = append(fields, ss.Name())
+		if !ss.Exclude {
+			fields = append(fields, ss.Name())
+		}
 	}
 	return fields
 }
