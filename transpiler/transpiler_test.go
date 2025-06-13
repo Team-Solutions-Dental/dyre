@@ -21,7 +21,7 @@ func TestEvalQueries(t *testing.T) {
 		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                       // OR Statement
 		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
 		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
-		{"int: exclude(@); > 5;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[int] > 5)"},                               // Exclude
+		{"bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                         // Exclude
 		// {"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
 	}
 

@@ -48,7 +48,7 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 		switch arg.(type) {
 		case *object.FieldCall:
 			ir.currentSelectStatement.Exclude = true
-			return arg
+			return &object.Builtin{}
 		default:
 			return newError("Invalid function call for exclude. %s %s", arg.Type(), arg.String())
 		}
