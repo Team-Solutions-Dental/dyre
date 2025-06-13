@@ -80,7 +80,7 @@ func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
 	}
 
 	if fields, ok := m["fields"]; ok {
-		request.Fields, err = parseEndpointFields(fields.([]any), &request)
+		request.Fields, request.FieldNames, err = parseEndpointFields(fields.([]any), &request)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("Fields: %w", err))
 		}
@@ -97,13 +97,6 @@ func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
 		return nil, errors.New(fmt.Sprintf("No field <fields> on request  %s\n", request.Name))
 	}
 
-	fieldList := []string{}
-	for _, field := range request.Fields {
-		fieldList = append(fieldList, field.Name)
-	}
-
-	request.FieldNames = fieldList
-
 	expected_keys := []string{"name", "fields", "tableName", "schemaName", "joins"}
 	for i := range m {
 		if !utils.Array_Contains(expected_keys, i) {
@@ -119,8 +112,9 @@ func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
 	return &request, nil
 }
 
-func parseEndpointFields(a []any, endpoint *Endpoint) (map[string]Field, error) {
+func parseEndpointFields(a []any, endpoint *Endpoint) (map[string]Field, []string, error) {
 	fields := map[string]Field{}
+	fieldNames := []string{}
 	var errs []error
 
 	for _, jsonField := range a {
@@ -137,9 +131,10 @@ func parseEndpointFields(a []any, endpoint *Endpoint) (map[string]Field, error) 
 		}
 
 		fields[field.Name] = field
+		fieldNames = append(fieldNames, field.Name)
 	}
 
-	return fields, errors.Join(errs...)
+	return fields, fieldNames, errors.Join(errs...)
 }
 
 func parseField(f any, e *Endpoint) (Field, error) {
