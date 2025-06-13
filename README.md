@@ -225,3 +225,36 @@ func getCustomersWithBiling(c *ex.Context) {
 	return
 }
 ```
+
+## Additional Expressions & Options
+
+### Order By
+
+Order by shares a similar syntax to query expressions where column names are declared followed by some expression.  
+Only accessible through the top level query.
+
+```bash
+ CreateDate: DESC; CustomerID: ASC;
+```
+
+### LIMIT
+
+This is just representation of TOP to restrict the amount returned.  
+Only accessible through the top level query.
+
+```go
+func getCustomersWithBiling(c *ex.Context) {
+
+    ...
+
+    q, err := Re.Request('Customers', query_string)
+	if err != nil {
+		c.String(500, "Failed to initialize request")
+		return
+	}
+
+    q.LIMIT(100)
+
+    ...
+}
+```
