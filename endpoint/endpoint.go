@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/vamuscari/dyre/object"
@@ -19,14 +18,14 @@ type Node interface {
 
 type Service struct {
 	Node
-	Endpoints map[string]*Endpoint
+	Endpoints     map[string]*Endpoint
+	EndpointNames []string
 }
 
 func (s *Service) JSON() string {
 	var out bytes.Buffer
-	endpointNames := sortedMapKeys(s.Endpoints)
 	enpoints := []string{}
-	for _, ep := range endpointNames {
+	for _, ep := range s.EndpointNames {
 		enpoints = append(enpoints, s.Endpoints[ep].JSON())
 	}
 	out.WriteString("[")
@@ -111,10 +110,8 @@ func (e *Endpoint) JSON() string {
 		joins = append(joins, join.JSON())
 	}
 
-	fieldNames := sortedMapKeys(e.Fields)
 	fields := []string{}
-
-	for _, i := range fieldNames {
+	for _, i := range e.FieldNames {
 		field := e.Fields[i]
 		fields = append(fields, field.JSON())
 	}
@@ -130,6 +127,19 @@ func (e *Endpoint) JSON() string {
 	out.WriteString("]")
 
 	out.WriteString("}")
+
+	return out.String()
+}
+
+func (e *Endpoint) TS() string {
+	var out bytes.Buffer
+	out.WriteString("interface " + e.Name + " { ")
+	for _, f := range e.FieldNames {
+		field := e.Fields[f]
+		out.WriteString("\n  ")
+		out.WriteString(field.TS())
+	}
+	out.WriteString("\n}")
 
 	return out.String()
 }
@@ -154,6 +164,20 @@ func (f *Field) JSON() string {
 	out.WriteString(fmt.Sprintf("\"nullable\" : %t ", f.Nullable))
 
 	out.WriteString("}")
+
+	return out.String()
+}
+
+func (f *Field) TS() string {
+	var out bytes.Buffer
+	out.WriteString(f.Name)
+	if f.Nullable {
+		out.WriteString("?")
+	}
+	out.WriteString(": ")
+
+	out.WriteString(objTypeToTsType(f.FieldType))
+	out.WriteString(";")
 
 	return out.String()
 }
@@ -196,15 +220,23 @@ func (j *Join) ChildEndpoint() *Endpoint {
 	return j.childEndpoint
 }
 
-func sortedMapKeys[T any](m map[string]T) []string {
-	keys := []string{}
-	for i := range m {
-		keys = append(keys, i)
+func objTypeToTsType(obj object.ObjectType) string {
+	switch obj {
+	case object.STRING_OBJ:
+		return "string"
+	case object.BOOLEAN_OBJ:
+		return "boolean"
+	case object.INTEGER_OBJ:
+		return "number"
+	case object.FLOAT_OBJ:
+		return "number"
+	case object.DATETIME_OBJ:
+		return "Date"
+	case object.DATE_OBJ:
+		return "Date"
+	case object.NULL_OBJ:
+		return "null"
+	default:
+		return "string"
 	}
-
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-
-	return keys
 }

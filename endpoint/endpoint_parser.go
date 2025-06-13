@@ -29,6 +29,7 @@ func ParseJSON(b []byte) (*Service, error) {
 			errs = append(errs, err)
 			continue
 		}
+		service.EndpointNames = append(service.EndpointNames, newEndpoint.Name)
 		endpoints[newEndpoint.Name] = newEndpoint
 	}
 

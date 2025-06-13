@@ -25,16 +25,6 @@ func TestParseJSON(t *testing.T) {
     ],
     "fields": [
       {
-        "name": "Active",
-        "type": "BOOLEAN",
-        "nullable": true
-      },
-      {
-        "name": "CreateDate",
-        "type": "DATE",
-        "nullable": true
-      },
-      {
         "name": "CustomerID",
         "type": "STRING",
         "nullable": false
@@ -50,6 +40,16 @@ func TestParseJSON(t *testing.T) {
         "nullable": true
       },
       {
+        "name": "CreateDate",
+        "type": "DATE",
+        "nullable": true
+      },
+      {
+        "name": "Active",
+        "type": "BOOLEAN",
+        "nullable": true
+      },
+      {
         "name": "Zip",
         "type": "INTEGER",
         "nullable": true
@@ -62,16 +62,64 @@ func TestParseJSON(t *testing.T) {
     "schemaName": "dbo",
     "joins": [
       {
-        "endpoint": "Customers",
+        "endpoint": "Sales",
         "on": [
-          "CustomerID",
-          "CustomerID"
+          "SaleID",
+          "SaleID"
         ]
       }
     ],
     "fields": [
       {
+        "name": "SaleID",
+        "type": "STRING",
+        "nullable": false
+      },
+      {
         "name": "Balance",
+        "type": "FLOAT",
+        "nullable": true
+      },
+      {
+        "name": "InvoiceNumber",
+        "type": "INTEGER",
+        "nullable": true
+      },
+      {
+        "name": "CreateDate",
+        "type": "DATE",
+        "nullable": true
+      }
+		]
+  },
+  {
+    "name": "Sales",
+    "tableName": "Sales",
+    "schemaName": "dbo",
+    "joins": [
+      {
+        "endpoint": "Customers",
+        "on": [
+          "CustomerID",
+          "CustomerID"
+        ]
+      },
+      {
+        "endpoint": "Invoices",
+        "on": [
+          "SaleID",
+          "SaleID"
+        ]
+      }
+    ],
+    "fields": [
+      {
+        "name": "CustomerID",
+        "type": "STRING",
+        "nullable": false
+      },
+      {
+        "name": "SaleID",
         "type": "FLOAT",
         "nullable": true
       },
@@ -81,16 +129,11 @@ func TestParseJSON(t *testing.T) {
         "nullable": true
       },
       {
-        "name": "CustomerID",
-        "type": "STRING",
-        "nullable": false
-      },
-      {
-        "name": "InvoiceNumber",
-        "type": "INTEGER",
+        "name": "Charge",
+        "type": "FLOAT",
         "nullable": true
       }
-    ]
+		]
   }
 ]
 `
@@ -105,7 +148,7 @@ func TestParseJSON(t *testing.T) {
 	// 	fmt.Println(strings.Join(p, "/"))
 	// }
 
-	expected_endpoints := []string{"Customers", "Invoices"}
+	expected_endpoints := []string{"Customers", "Invoices", "Sales"}
 	for _, expected_endpoint := range expected_endpoints {
 		_, ok := service.Endpoints[expected_endpoint]
 		if !ok {
@@ -120,6 +163,7 @@ func TestParseJSON(t *testing.T) {
 	evaluatedJSON := strings.Replace(service.JSON(), " ", "", -1)
 
 	if comparableJSON != evaluatedJSON {
+		diffStrings(comparableJSON, evaluatedJSON)
 		t.Errorf("evaluated JSON did not match expected JSON\n\nexpected:\n%s\n\nevaluated:\n%s\n\n", comparableJSON, evaluatedJSON)
 	}
 
@@ -173,10 +217,6 @@ func testingJSON() string {
         "name": "CustomerID",
         "nullable": false
       },
-      {
-        "name": "Zip",
-        "type": "int"
-      },
       "FirstName",
       "LastName",
       {
@@ -186,6 +226,10 @@ func testingJSON() string {
       {
         "name": "Active",
         "type": "bool"
+      },
+      {
+        "name": "Zip",
+        "type": "int"
       }
     ]
   },
@@ -223,7 +267,7 @@ func testingJSON() string {
   },
   {
     "name": "Sales",
-    "tableName": "Invoices",
+    "tableName": "Sales",
     "schemaName": "dbo",
     "joins": [
       {

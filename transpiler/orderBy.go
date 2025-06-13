@@ -74,6 +74,7 @@ func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 }
 
 func evalOrderByColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
+	//TODO: Order By should view table and provided select statements
 	loc := ir.sql.SelectStatementLocation(node.TokenLiteral())
 	if loc == -1 {
 		return newError("Requested Order By column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName)
