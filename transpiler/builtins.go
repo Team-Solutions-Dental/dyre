@@ -78,7 +78,7 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 		switch {
 		case arg.Type() == object.STRING_OBJ:
 			return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-				Value: fmt.Sprintf("LIKE %s", args[0])}
+				Value: fmt.Sprintf("%s.[%s] LIKE %s", ir.endpoint.TableName, ir.currentField.Name, args[0])}
 		default:
 			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
 		}
