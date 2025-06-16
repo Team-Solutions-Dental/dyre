@@ -126,9 +126,17 @@ func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
 }
 
+// Make sure first letter is alpha. Following can include digits
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) {
+
+	if !isLetter(l.ch) {
+		return l.input[position:l.position]
+	}
+
+	l.readChar()
+
+	for isLetter(l.ch) || isDigit(l.ch) {
 		l.readChar()
 	}
 	return l.input[position:l.position]

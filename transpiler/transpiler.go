@@ -111,7 +111,6 @@ func (ir *IR) evalTable() object.Object {
 		if isError(result) {
 			return result
 		}
-
 	}
 
 	result := eval(ir.ast, ir)

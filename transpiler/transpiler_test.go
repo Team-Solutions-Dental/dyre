@@ -22,6 +22,7 @@ func TestEvalQueries(t *testing.T) {
 		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
 		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
 		{"bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                         // Exclude
+		{"int2:", "SELECT Test.[int2] FROM dbo.Test"},                                                                               // AlphaNumeric Column
 		{"string: alias('str');", "SELECT (Test.[string]) AS 'str' FROM dbo.Test"},                                                  // alias
 
 		//{"alias('test');bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},           // TableFunction
@@ -81,9 +82,10 @@ func testNew(input string) (*PrimaryIR, error) {
 				Name:       "Test",
 				TableName:  "Test",
 				SchemaName: "dbo",
-				FieldNames: []string{"int", "string", "bool", "date"},
+				FieldNames: []string{"int", "int2", "string", "bool", "date"},
 				Fields: map[string]endpoint.Field{
 					"int":    {Name: "int", FieldType: object.INTEGER_OBJ, Nullable: true},
+					"int2":   {Name: "int2", FieldType: object.INTEGER_OBJ, Nullable: true},
 					"string": {Name: "string", FieldType: object.STRING_OBJ, Nullable: true},
 					"bool":   {Name: "bool", FieldType: object.BOOLEAN_OBJ, Nullable: true},
 					"date":   {Name: "date", FieldType: object.DATE_OBJ, Nullable: true},
