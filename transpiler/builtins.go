@@ -47,8 +47,8 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 
 		switch {
 		case arg.Type() == object.STRING_OBJ:
-			return &object.Expression{ExpressionType: object.DATE_OBJ,
-				Value: fmt.Sprintf("CONVERT(date, %s, 23)", args[0])}
+			return &object.Expression{ExpressionType: object.DATETIME_OBJ,
+				Value: fmt.Sprintf("CONVERT(date, %s, 127)", args[0])}
 		default:
 			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
 		}
@@ -81,6 +81,24 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 				Value: fmt.Sprintf("%s.[%s] LIKE %s", ir.endpoint.TableName, ir.currentField.Name, args[0])}
 		default:
 			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
+		}
+	},
+	"alias": func(ir *IR, args ...object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("wrong number of arguments. got=%d, want=1", len(args))
+		}
+
+		arg := args[0]
+		alias := arg.String()
+
+		switch {
+		case arg.Type() == object.STRING_OBJ && ir.currentField != nil:
+			ir.currentSelectStatement.Alias = &alias
+			return &object.Builtin{}
+		case arg.Type() == object.STRING_OBJ && ir.currentField == nil:
+			return newError("Does not support table aliases. %s", arg.String())
+		default:
+			return newError("Invalid First Argument Type. %s %s", arg.Type(), arg.String())
 		}
 	},
 }

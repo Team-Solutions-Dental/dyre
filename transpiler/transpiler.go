@@ -45,7 +45,7 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	return &ir, err
 }
 
-// Sub IR is missing methods exclusive to top level query
+// Sub IR is excludes methods unique to top level query
 func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	if endpoint == nil {
 		return nil, errors.New("No end point provided for query: " + query)
@@ -338,10 +338,15 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	}
 }
 
+// Evaluate @ for expressions
 func evalColumnCall(node ast.Node, ir *IR) object.Object {
 
 	if node.TokenLiteral() != "@" {
 		return newError("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@")
+	}
+
+	if ir.currentField == nil {
+		return newError("Invalid Column Call, %s", "No current field found")
 	}
 
 	return &object.FieldCall{FieldType: ir.currentField.Type(),
