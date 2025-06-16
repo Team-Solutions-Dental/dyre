@@ -24,8 +24,10 @@ func TestEvalQueries(t *testing.T) {
 		{"bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                         // Exclude
 		{"int2:", "SELECT Test.[int2] FROM dbo.Test"},                                                                               // AlphaNumeric Column
 		{"string: alias('str');", "SELECT (Test.[string]) AS 'str' FROM dbo.Test"},                                                  // alias
+		{"bool: == NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NULL)"},                                          // IS NULL
+		{"bool: != NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NOT NULL)"},                                      // IS NOT NULL
 
-		//{"alias('test');bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},           // TableFunction
+		// {"alias('test');bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},           // TableFunction
 		// {"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
 	}
 

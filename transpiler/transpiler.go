@@ -41,7 +41,10 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
 	q, err := parse(query)
-	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint, ast: q, error: err, sql: &sql.Query{Depth: 0}}}
+	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint,
+		ast:   q,
+		error: err,
+		sql:   &sql.Query{Depth: 0}}}
 	return &ir, err
 }
 
@@ -51,7 +54,10 @@ func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
 	q, err := parse(query)
-	var ir SubIR = SubIR{IR: IR{endpoint: endpoint, ast: q, error: err, sql: &sql.Query{Depth: 0}}}
+	var ir SubIR = SubIR{IR: IR{endpoint: endpoint,
+		ast:   q,
+		error: err,
+		sql:   &sql.Query{Depth: 0}}}
 	return &ir, err
 }
 
@@ -285,9 +291,9 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 func evalBangOperatorExpression(right object.Object) object.Object {
 	switch {
 	case right.Type() == object.BOOLEAN_OBJ:
-		return &object.BooleanExpression{Value: fmt.Sprintf("!%s", right.String())}
-	case right.Type() == object.EXPRESSION_OBJ:
-		return &object.BooleanExpression{Value: fmt.Sprintf("!%s", right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("!%s", right.String())}
 	default:
 		return newError("Invalid Bang Operator Expression %s", right.String())
 	}
@@ -296,9 +302,13 @@ func evalBangOperatorExpression(right object.Object) object.Object {
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 	switch {
 	case right.Type() == object.INTEGER_OBJ:
-		return &object.Expression{ExpressionType: object.INTEGER_OBJ, Value: fmt.Sprintf("-%s", right.String())}
+		return &object.Expression{
+			ExpressionType: object.INTEGER_OBJ,
+			Value:          fmt.Sprintf("-%s", right.String())}
 	case right.Type() == object.EXPRESSION_OBJ:
-		return &object.Expression{ExpressionType: object.INTEGER_OBJ, Value: fmt.Sprintf("-%s", right.String())}
+		return &object.Expression{
+			ExpressionType: object.INTEGER_OBJ,
+			Value:          fmt.Sprintf("-%s", right.String())}
 	default:
 		return newError("Invalid Minus Prefix Operator Expression %s", right.String())
 	}
@@ -306,34 +316,63 @@ func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
 
 func evalInfixExpression(operator string, left, right object.Object) object.Object {
 	switch {
-	// case left.Type() != right.Type():
+	case left.Type() == object.NULL_OBJ:
+		return evalInfixNullExpression(operator, right, left)
+	case right.Type() == object.NULL_OBJ:
+		return evalInfixNullExpression(operator, left, right)
+	// case left.Type() == object.NULL_OBJ || right.Type() == object.NULL_OBJ:
 	// 	return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	case operator == "==":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s = %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s = %s)", left.String(), right.String())}
 	case operator == "!=":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s != %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s != %s)", left.String(), right.String())}
 	case operator == ">":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s > %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s > %s)", left.String(), right.String())}
 	case operator == "<":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s < %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s < %s)", left.String(), right.String())}
 	case operator == ">=":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
 	case operator == "<=":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
 	case operator == "AND":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s AND %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s AND %s)", left.String(), right.String())}
 	case operator == "OR":
-		return &object.Expression{ExpressionType: object.BOOLEAN_OBJ,
-			Value: fmt.Sprintf("(%s OR %s)", left.String(), right.String())}
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s OR %s)", left.String(), right.String())}
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+func evalInfixNullExpression(operator string, ref, null object.Object) object.Object {
+	switch {
+	case ref.Type() == object.NULL_OBJ:
+		return newError("NULL cannot be compared to NULL")
+	case operator == "==":
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s IS %s)", ref.String(), null.String())}
+	case operator == "!=":
+		return &object.Expression{
+			ExpressionType: object.BOOLEAN_OBJ,
+			Value:          fmt.Sprintf("(%s IS NOT %s)", ref.String(), null.String())}
+	default:
+		return newError("unknown operator: %s %s %s", ref.Type(), operator, null.Type())
 	}
 }
 
