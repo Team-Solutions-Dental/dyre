@@ -238,6 +238,7 @@ func parseEndpointJoins(a []any, e *Endpoint) (map[string]Join, error) {
 			continue
 		}
 
+		e.JoinNames = append(e.JoinNames, newJoin.childEndpointName)
 		joins[newJoin.childEndpointName] = newJoin
 	}
 

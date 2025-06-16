@@ -18,7 +18,7 @@ func TestEvalQueries(t *testing.T) {
 		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                              // @ reference call
 		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                            // Boolean Comparison
 		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                 // Integer Comparison
-		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 6) OR (Test.[int] < 10))"},                       // OR Statement
+		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                       // OR Statement
 		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
 		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
 		{"bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                         // Exclude

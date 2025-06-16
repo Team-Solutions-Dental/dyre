@@ -52,9 +52,10 @@ func (s *Service) GetEndpoint(req string) (*Endpoint, error) {
 // ["Customers", "Invoices"]
 func (s *Service) AllEndpointPaths(depth int) [][]string {
 	var endpoints [][]string
-	for _, ep := range s.Endpoints {
+	for _, i := range s.EndpointNames {
+		endpoint := s.Endpoints[i]
 		new_path := []string{}
-		endpoints = append(endpoints, EndpointPaths(ep, new_path, 0, depth)...)
+		endpoints = append(endpoints, EndpointPaths(endpoint, new_path, 0, depth)...)
 	}
 
 	return endpoints
@@ -73,16 +74,14 @@ func EndpointPaths(endpoint *Endpoint, currpath []string, depth int, depthStop i
 		return subPaths
 	}
 
-	for _, j := range endpoint.Joins {
-		if utils.Array_Contains(path, j.childEndpointName) {
+	for _, j := range endpoint.JoinNames {
+		if utils.Array_Contains(path, j) {
 			continue
 		}
 
-		if j.ChildEndpoint() == nil {
-			continue
-		}
+		join := endpoint.Joins[j]
 
-		for _, p := range EndpointPaths(j.ChildEndpoint(), path, (depth + 1), depthStop) {
+		for _, p := range EndpointPaths(join.ChildEndpoint(), path, (depth + 1), depthStop) {
 			new_path := append([]string{endpoint.Name}, p...)
 			subPaths = append(subPaths, new_path)
 		}
@@ -98,6 +97,7 @@ type Endpoint struct {
 	TableName  string
 	SchemaName string
 	Joins      map[string]Join
+	JoinNames  []string
 	Fields     map[string]Field
 	FieldNames []string
 }
