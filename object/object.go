@@ -52,8 +52,8 @@ type Float struct {
 	Value float64
 }
 
-func (i *Float) Type() ObjectType { return FLOAT_OBJ }
-func (i *Float) String() string   { return fmt.Sprintf("%f", i.Value) }
+func (f *Float) Type() ObjectType { return FLOAT_OBJ }
+func (f *Float) String() string   { return fmt.Sprintf("%f", f.Value) }
 
 type Boolean struct {
 	Value bool
@@ -66,15 +66,6 @@ func (b *Boolean) String() string {
 	}
 	return "0"
 }
-
-type BooleanExpression struct {
-	Value string
-}
-
-func (be *BooleanExpression) Type() ObjectType { return BOOLEAN_OBJ }
-func (be *BooleanExpression) String() string   { return be.Value }
-
-type BuiltinFunction func(args ...Object) Object
 
 type Null struct{}
 
@@ -94,6 +85,8 @@ type String struct {
 
 func (s *String) Type() ObjectType { return STRING_OBJ }
 func (s *String) String() string   { return fmt.Sprintf("'%s'", s.Value) }
+
+type BuiltinFunction func(args ...Object) Object
 
 type Builtin struct {
 	Fn BuiltinFunction
