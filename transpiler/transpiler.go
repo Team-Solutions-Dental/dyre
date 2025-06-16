@@ -359,6 +359,7 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 	}
 }
 
+// TODO: Check for Nullable
 func evalInfixNullExpression(operator string, ref, null object.Object) object.Object {
 	switch {
 	case ref.Type() == object.NULL_OBJ:
