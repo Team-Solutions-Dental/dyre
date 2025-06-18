@@ -89,11 +89,10 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 		}
 
 		arg := args[0]
-		alias := arg.String()
-
 		switch {
 		case arg.Type() == object.STRING_OBJ && ir.currentField != nil:
-			ir.currentSelectStatement.Alias = &alias
+			alias := arg.(*object.String)
+			ir.currentSelectStatement.Alias = &alias.Value
 			return &object.Builtin{}
 		case arg.Type() == object.STRING_OBJ && ir.currentField == nil:
 			return newError("Does not support table aliases. %s", arg.String())
