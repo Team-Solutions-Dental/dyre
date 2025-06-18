@@ -129,11 +129,11 @@ func (ir *IR) evalTable() object.Object {
 			if ss.Name() == j.childOn {
 				continue
 			}
+			fieldName := ss.Name()
 			joinedSelect := &sql.SelectStatement{
-				FieldName: ss.FieldName,
+				FieldName: &fieldName,
 				TableName: &j.alias,
 				Exclude:   ss.Exclude,
-				Alias:     ss.Alias,
 			}
 			ir.sql.SelectStatements = append(ir.sql.SelectStatements, joinedSelect)
 		}
