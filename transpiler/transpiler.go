@@ -133,6 +133,7 @@ func (ir *IR) evalTable() object.Object {
 				FieldName: ss.FieldName,
 				TableName: &j.alias,
 				Exclude:   ss.Exclude,
+				Alias:     ss.Alias,
 			}
 			ir.sql.SelectStatements = append(ir.sql.SelectStatements, joinedSelect)
 		}
@@ -419,6 +420,11 @@ func evalExpressions(
 
 func evalCallExpression(function string, exps []ast.Expression, ir *IR) object.Object {
 	args := evalExpressions(exps, ir)
+
+	_, ok := builtins[function]
+	if !ok {
+		return newError("Function %s not found", function)
+	}
 
 	return builtins[function](ir, args...)
 }
