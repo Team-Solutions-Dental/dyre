@@ -151,10 +151,8 @@ func eval(node ast.Node, ir *IR) object.Object {
 	switch node := node.(type) {
 	case *ast.RequestStatements:
 		return evalQueryStatements(node, ir)
-	case *ast.ColumnStatement:
-		return evalColumnStatement(node, ir)
-	case *ast.BlockStatement:
-		return evalBlockStatement(node, ir)
+	case *ast.ColumnLiteral:
+		return evalColumnLiteral(node, ir)
 	case *ast.ExpressionStatement:
 		return evalExpressionStatement(node, ir)
 	case *ast.IntegerLiteral:
@@ -183,7 +181,7 @@ func eval(node ast.Node, ir *IR) object.Object {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right)
-	case *ast.ColumnCall:
+	case *ast.Reference:
 		return evalColumnCall(node, ir)
 	case *ast.CallExpression:
 		return evalCallExpression(node.Function.TokenLiteral(), node.Arguments, ir)
@@ -206,7 +204,7 @@ func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	return result
 }
 
-func evalColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
+func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
 	if !utils.Array_Contains(ir.endpoint.FieldNames, node.TokenLiteral()) {
 		return newError("Requested column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName)
 	}
@@ -233,30 +231,7 @@ func evalColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, selects)
 	}
 
-	if node.Expressions != nil {
-		err := eval(node.Expressions, ir)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
-}
-
-func evalBlockStatement(block *ast.BlockStatement, ir *IR) object.Object {
-	var result object.Object
-
-	for _, statement := range block.Statements {
-		if statement != nil {
-			result = eval(statement, ir)
-
-			if isError(result) {
-				return result
-			}
-		}
-	}
-
-	return result
 }
 
 func evalExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) object.Object {
@@ -379,18 +354,20 @@ func evalInfixNullExpression(operator string, ref, null object.Object) object.Ob
 }
 
 // Evaluate @ for expressions
-func evalColumnCall(node ast.Node, ir *IR) object.Object {
+func evalColumnCall(node *ast.Reference, ir *IR) object.Object {
 
-	if node.TokenLiteral() != "@" {
-		return newError("Invalid Token Literal. got=%s, want=%s", node.TokenLiteral(), "@")
+	if node.Parameter == nil && ir.currentField == nil {
+		return newError("Invalid Column Call, %s", "No current field specified or referenced")
 	}
 
-	if ir.currentField == nil {
-		return newError("Invalid Column Call, %s", "No current field found")
+	if node.Parameter == nil {
+		return &object.FieldCall{FieldType: ir.currentField.Type(),
+			Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentField.Name)}
 	}
 
-	return &object.FieldCall{FieldType: ir.currentField.Type(),
-		Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentField.Name)}
+	return &object.FieldCall{FieldType: object.STRING_OBJ,
+		Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, node.Parameter.Value)}
+
 }
 
 func newError(format string, a ...interface{}) *object.Error {

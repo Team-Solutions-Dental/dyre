@@ -26,34 +26,12 @@ func evalOrderBy(node ast.Node, ir *IR) object.Object {
 	switch node := node.(type) {
 	case *ast.RequestStatements:
 		return evalOrderByStatements(node, ir)
-	case *ast.ColumnStatement:
-		return evalOrderByColumnStatement(node, ir)
-	case *ast.BlockStatement:
-		return evalOrderByBlockStatement(node, ir)
+	case *ast.ColumnLiteral:
+		return evalOrderByColumnLiteral(node, ir)
 	case *ast.ExpressionStatement:
 		return evalOrderByExpressionStatement(node, ir)
 	case *ast.OrderExpression:
 		return evalOrderExpression(node, ir)
-	// case *ast.PrefixExpression:
-	// 	right := evalOrderBy(node.Right, ir)
-	// 	if isError(right) {
-	// 		return right
-	// 	}
-	// 	return evalPrefixExpression(node.Operator, right)
-	// case *ast.InfixExpression:
-	// 	left := evalOrderBy(node.Left, ir)
-	// 	if isError(left) {
-	// 		return left
-	// 	}
-	// 	right := evalOrderBy(node.Right, ir)
-	// 	if isError(right) {
-	// 		return right
-	// 	}
-	// 	return evalInfixExpression(node.Operator, left, right)
-	case *ast.ColumnCall:
-		return evalColumnCall(node, ir)
-	case *ast.CallExpression:
-		return evalCallExpression(node.Function.TokenLiteral(), node.Arguments, ir)
 	default:
 		return newError("Unknown Order By Evaluation Type: %T", node)
 	}
@@ -61,6 +39,8 @@ func evalOrderBy(node ast.Node, ir *IR) object.Object {
 
 func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	var result object.Object
+
+	ir.currentField = nil
 
 	for _, statement := range node.Statements {
 		result = evalOrderBy(statement, ir)
@@ -70,43 +50,6 @@ func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 			return result
 		}
 	}
-	return result
-}
-
-func evalOrderByColumnStatement(node *ast.ColumnStatement, ir *IR) object.Object {
-	//TODO: Order By should view table and provided select statements
-	loc := ir.sql.SelectStatementLocation(node.TokenLiteral())
-	if loc == -1 {
-		return newError("Requested Order By column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName)
-	}
-
-	ir.currentSelectStatement = ir.sql.SelectStatements[loc]
-
-	if node.Expressions != nil {
-		err := evalOrderBy(node.Expressions, ir)
-		if err != nil {
-			return err
-		}
-	} else {
-		ir.sql.OrderBy = append(ir.sql.OrderBy, &sql.OrderByStatement{Ascending: true, FieldName: ir.currentSelectStatement.Name()})
-	}
-
-	return nil
-}
-
-func evalOrderByBlockStatement(block *ast.BlockStatement, ir *IR) object.Object {
-	var result object.Object
-
-	for _, statement := range block.Statements {
-		if statement != nil {
-			result = evalOrderBy(statement, ir)
-
-			if isError(result) {
-				return result
-			}
-		}
-	}
-
 	return result
 }
 
@@ -130,9 +73,17 @@ func evalOrderByExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) obje
 
 }
 
+func evalOrderByColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
+	var result object.Object
+
+	ir.sql.OrderBy = append(ir.sql.OrderBy, &sql.OrderByStatement{Ascending: true, FieldName: ir.currentSelectStatement.Name()})
+
+	return result
+}
+
 func evalOrderExpression(node *ast.OrderExpression, ir *IR) object.Object {
 
-	ir.sql.OrderBy = append(ir.sql.OrderBy, &sql.OrderByStatement{Ascending: node.Ascending, FieldName: ir.currentSelectStatement.Name()})
+	ir.sql.OrderBy[len(ir.sql.OrderBy)-1].Ascending = node.Ascending
 
 	return nil
 }

@@ -42,6 +42,57 @@ ident: logic expression. data type methods
 
 conditions on return
 
+Column creation?
+
+
+@(CustomerID) > 5;
+
+ColumnFunctions
+
+AS, GROUP, MAX, MIN, COUNT 
+
+CustomerID:@('year', datepart(year,@(CreateDate))): == '2025'
+
+datepart('year', @('CreateDate')) > '2025';
+
+AS('year', value_expression ): AS
+
+if contains alias with where expression
+
+SELECT Customers.CustomerID, ( Customers.Active ) as isActive
+FROM Customers
+WHERE Customers
+
+
+{ 
+ Type
+ Endpoint: {
+  Query:
+  Joins: []
+ }
+}
+
+
+{
+ Query:
+ Endpoint:
+ Joins: []
+ GroupBy
+} 
+
+{
+ Query:
+ Endpoint:
+ Joins: [
+  {
+   Type: "INNER",
+   Query: ""
+   Endpoint: ""
+   Joins: []
+  }
+ ]
+} 
+
 
 
 

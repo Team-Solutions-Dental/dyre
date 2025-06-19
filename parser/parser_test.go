@@ -8,6 +8,25 @@ import (
 	"github.com/vamuscari/dyre/lexer"
 )
 
+func TestColumnStatement(t *testing.T) {
+	input := "foo: 5; false; func(@);"
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	if len(query.Statements) != 4 {
+		t.Errorf("query.Statements does not contain %d statements, got=%d\n",
+			4, len(query.Statements))
+	}
+
+	_, ok := query.Statements[0].(*ast.ColumnLiteral)
+	if !ok {
+		t.Fatalf("query.Statements[0] is not ast.ColumnLiteral. got=%T", query.Statements[0])
+	}
+
+}
+
 func TestChainColumnStatement(t *testing.T) {
 	input := "foo:bar:baz:"
 	l := lexer.New(input)
@@ -21,86 +40,10 @@ func TestChainColumnStatement(t *testing.T) {
 	}
 
 	for i := range query.Statements {
-		clmn, ok := query.Statements[i].(*ast.ColumnStatement)
+		_, ok := query.Statements[i].(*ast.ColumnLiteral)
 		if !ok {
-			t.Fatalf("query.Statements[%d] is not ast.ColumnStatement. got=%T", i, query.Statements[i])
+			t.Fatalf("query.Statements[%d] is not ast.ColumnLiteral. got=%T", i, query.Statements[i])
 		}
-		if clmn.Expressions != nil {
-			t.Fatalf("query.Statements[%d].expression is not nil", i)
-		}
-	}
-}
-
-func TestChainColumnStatementWithExpression(t *testing.T) {
-	input := "foo: > 5; < 10;bar: > 0; < 3;"
-	l := lexer.New(input)
-	p := New(l)
-	query := p.ParseQuery()
-	checkParserErrors(t, p)
-
-	if len(query.Statements) != 2 {
-		t.Errorf("query.Statements does not contain %d statements, got=%d\n",
-			2, len(query.Statements))
-		for i, s := range query.Statements {
-			t.Errorf("Statement[%d]: %s", i, s.String())
-		}
-	}
-
-	for i := range query.Statements {
-		clmn, ok := query.Statements[i].(*ast.ColumnStatement)
-		if !ok {
-			fmt.Printf("\n %s", query.Statements[i].TokenLiteral())
-			t.Fatalf("query.Statements[%d] is not ast.ColumnStatement. got=%T", i, query.Statements[i])
-		}
-
-		if len(clmn.Expressions.Statements) != 2 {
-			for j, es := range clmn.Expressions.Statements {
-				t.Errorf("Query %d. Expression %d. %s", i, j, es.String())
-			}
-			t.Fatalf("query.Statements[%d].expression.statements is not 2, got=%d", i, len(clmn.Expressions.Statements))
-		}
-
-	}
-}
-
-func TestColumnStatement(t *testing.T) {
-	input := "foo: 5; false; func(@);"
-	l := lexer.New(input)
-	p := New(l)
-	query := p.ParseQuery()
-	checkParserErrors(t, p)
-
-	if len(query.Statements) != 1 {
-		t.Errorf("query.Statements does not contain %d statements, got=%d\n",
-			1, len(query.Statements))
-	}
-
-	clmn, ok := query.Statements[0].(*ast.ColumnStatement)
-	if !ok {
-		t.Fatalf("query.Statements[0] is not ast.ColumnStatement. got=%T", query.Statements[0])
-	}
-
-	if len(clmn.Expressions.Statements) != 3 {
-		t.Errorf("clmn.Expressions.Statements does not contain %d statements, got=%d\n",
-			2, len(query.Statements))
-	}
-
-	stmnt0, ok := clmn.Expressions.Statements[0].(*ast.ExpressionStatement)
-	if !ok {
-		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T", clmn.Expressions.Statements[0])
-	}
-
-	if !testIntegerLiteral(t, stmnt0.Expression, 5) {
-		return
-	}
-
-	stmnt1, ok := clmn.Expressions.Statements[1].(*ast.ExpressionStatement)
-	if !ok {
-		t.Fatalf("Statements[1] is not ast.ExpressionStatement. got=%T", clmn.Expressions.Statements[1])
-	}
-
-	if !testBooleanLiteral(t, stmnt1.Expression, false) {
-		return
 	}
 }
 
@@ -564,7 +507,7 @@ func TestOrderExpression(t *testing.T) {
 	stmt := query.Statements[0].(*ast.ExpressionStatement)
 	literal, ok := stmt.Expression.(*ast.OrderExpression)
 	if !ok {
-		t.Fatalf("exp not *ast.StringLiteral. got=%T", stmt.Expression)
+		t.Fatalf("exp not *ast.OrderExpression. got=%T", stmt.Expression)
 	}
 
 	if literal.TokenLiteral() != "ASC" {
@@ -573,6 +516,62 @@ func TestOrderExpression(t *testing.T) {
 
 	if literal.Ascending != true {
 		t.Errorf("literal.Ascending not %t. got=%t, ", true, literal.Ascending)
+	}
+
+}
+
+func TestReferenceLiteral(t *testing.T) {
+	input := `@`
+
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	stmt := query.Statements[0].(*ast.ExpressionStatement)
+	ref, ok := stmt.Expression.(*ast.Reference)
+	if !ok {
+		t.Fatalf("exp not *ast.Reference. got=%T", stmt.Expression)
+	}
+
+	if ref.TokenLiteral() != "@" {
+		t.Errorf("literal not %q. got=%q, ", "hello word", ref.TokenLiteral())
+	}
+
+	if ref.Parameter != nil {
+		t.Errorf("got unexpected parameter. got=%v, ", ref.Parameter)
+	}
+
+	if ref.String() != input {
+		t.Errorf("got unexpected parsing string . got=%s, ", ref.String())
+	}
+
+}
+
+func TestReferenceFunction(t *testing.T) {
+	input := `@(column)`
+
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	stmt := query.Statements[0].(*ast.ExpressionStatement)
+	ref, ok := stmt.Expression.(*ast.Reference)
+	if !ok {
+		t.Fatalf("exp not *ast.Reference. got=%T", stmt.Expression)
+	}
+
+	if ref.TokenLiteral() != "@" {
+		t.Errorf("literal not %q. got=%q, ", "hello word", ref.TokenLiteral())
+	}
+
+	if ref.Parameter == nil {
+		t.Errorf("Missing parameter.")
+	}
+
+	if ref.String() != input {
+		t.Errorf("got unexpected parsing string . got=%s, ", ref.String())
 	}
 
 }

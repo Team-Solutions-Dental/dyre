@@ -74,7 +74,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.LTE, p.parseColumnPrefixExpression)
 	p.registerPrefix(token.GT, p.parseColumnPrefixExpression)
 	p.registerPrefix(token.GTE, p.parseColumnPrefixExpression)
-	p.registerPrefix(token.COLUMNCALL, p.parseColumnCall)
+	p.registerPrefix(token.REFERENCE, p.parseReference)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.ASC, p.parseOrderExpression)
 	p.registerPrefix(token.DESC, p.parseOrderExpression)
@@ -117,43 +117,27 @@ func (p *Parser) ParseQuery() *ast.RequestStatements {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	switch p.curToken.Type {
-	case token.COLUMN:
-		return p.parseColumnStatement()
+	switch {
+	case p.curTokenIs(token.IDENT) && p.peekTokenIs(token.COLON):
+		return p.parseColumnLiteral()
 	default:
 		return p.parseExpressionStatement()
 	}
 }
 
-func (p *Parser) parseColumnStatement() *ast.ColumnStatement {
-	stmt := &ast.ColumnStatement{Token: p.curToken}
+// Expects ident, colon
+// Since the transpiler maintains an ref to the current column
+// they will no longer hold reference following expressions
+func (p *Parser) parseColumnLiteral() *ast.ColumnLiteral {
+	lit := &ast.ColumnLiteral{Token: p.curToken}
 
-	if !p.peekTokenIs(token.COLUMN) && !p.peekTokenIs(token.EOF) {
-		stmt.Expressions = p.parseBlockStatement()
-	}
+	p.nextToken()
 
-	// for p.peekTokenIs(token.SEMICOLON) {
-	// 	p.nextToken()
-	// }
-	// if !p.curTokenIs(token.SEMICOLON) && !p.curTokenIs(token.EOF) {
-	// 	p.nextToken()
-	// }
-
-	return stmt
-}
-
-func (p *Parser) parseBlockStatement() *ast.BlockStatement {
-	block := &ast.BlockStatement{Token: p.curToken}
-	block.Statements = []ast.Statement{}
-
-	for !p.peekTokenIs(token.COLUMN) && !p.peekTokenIs(token.EOF) {
+	for p.peekTokenIs(token.SEMICOLON) {
 		p.nextToken()
-		stmt := p.parseStatement()
-		if stmt != nil {
-			block.Statements = append(block.Statements, stmt)
-		}
 	}
-	return block
+
+	return lit
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
@@ -200,7 +184,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 	leftExp := prefix()
 
-	for !p.peekTokenIs(token.SEMICOLON) && !p.peekTokenIs(token.COLUMN) && precedence < p.peekPrecedence() {
+	for !p.peekTokenIs(token.SEMICOLON) && !p.peekTokenIs(token.EOF) && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp
@@ -316,34 +300,6 @@ func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
 
-// (<parameter one>,<parameter two>,<parameter three>,...)
-func (p *Parser) parseFunctionParameters() []*ast.Identifier {
-	identifiers := []*ast.Identifier{}
-
-	if p.peekTokenIs(token.RPAREN) {
-		p.nextToken()
-		return identifiers
-	}
-
-	p.nextToken()
-
-	ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-	identifiers = append(identifiers, ident)
-
-	for p.peekTokenIs(token.COMMA) {
-		p.nextToken()
-		p.nextToken()
-		ident := &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-		identifiers = append(identifiers, ident)
-	}
-
-	if !p.expectPeek(token.RPAREN) {
-		return nil
-	}
-
-	return identifiers
-}
-
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Arguments = p.parseCallArguments()
@@ -374,15 +330,31 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	return args
 }
 
-func (p *Parser) parseColumnCall() ast.Expression {
-	return &ast.ColumnCall{Token: p.curToken}
+func (p *Parser) parseReference() ast.Expression {
+	ref := &ast.Reference{Token: p.curToken}
+
+	if !p.peekTokenIs(token.LPAREN) {
+		return ref
+	}
+
+	p.nextToken()
+	p.nextToken()
+
+	ref.Parameter = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	return ref
+
 }
 
 func (p *Parser) parseColumnPrefixExpression() ast.Expression {
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Literal,
-		Left:     &ast.ColumnCall{Token: token.Token{Type: token.COLUMNCALL, Literal: "@"}},
+		Left:     &ast.Reference{Token: token.Token{Type: token.REFERENCE, Literal: "@"}},
 	}
 
 	precedence := p.curPrecedence()

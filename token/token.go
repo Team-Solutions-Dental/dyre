@@ -42,7 +42,7 @@ const (
 	LBRACE = "}"
 	RBRACE = "{"
 
-	COLUMNCALL = "@"
+	REFERENCE = "@"
 
 	FUNCTION = "FUNCTION"
 	STRING   = "STRING"

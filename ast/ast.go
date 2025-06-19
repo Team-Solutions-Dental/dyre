@@ -21,6 +21,8 @@ type Expression interface {
 	expressionNode()
 }
 
+// All statements made in a request.
+// Seperated by ; or columns.
 type RequestStatements struct {
 	Statements []Statement
 }
@@ -43,23 +45,17 @@ func (p *RequestStatements) String() string {
 	return out.String()
 }
 
-type ColumnStatement struct {
-	Token       token.Token
-	Expressions *BlockStatement
+// The call of a column into the output
+// Ex. FirstName:
+type ColumnLiteral struct {
+	Token token.Token
 }
 
-func (cs *ColumnStatement) statementNode()       {}
-func (cs *ColumnStatement) TokenLiteral() string { return cs.Token.Literal }
-func (cs *ColumnStatement) String() string {
+func (cs *ColumnLiteral) statementNode()       {}
+func (cs *ColumnLiteral) TokenLiteral() string { return cs.Token.Literal }
+func (cs *ColumnLiteral) String() string {
 	var out bytes.Buffer
 	out.WriteString(cs.TokenLiteral() + ": ")
-
-	if cs.Expressions != nil {
-		out.WriteString(cs.Expressions.String())
-	}
-
-	out.WriteString(";")
-
 	return out.String()
 }
 
@@ -75,23 +71,6 @@ func (es *ExpressionStatement) String() string {
 		return es.Expression.String()
 	}
 	return ""
-}
-
-type BlockStatement struct {
-	Token      token.Token
-	Statements []Statement
-}
-
-func (bs *BlockStatement) expressionNode()      {}
-func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
-func (bs *BlockStatement) String() string {
-	var out bytes.Buffer
-
-	for _, s := range bs.Statements {
-		out.WriteString(s.String())
-	}
-
-	return out.String()
 }
 
 type Identifier struct {
@@ -133,25 +112,6 @@ type PrefixExpression struct {
 	Token    token.Token
 	Operator string
 	Right    Expression
-}
-
-type ColumnPrefixExpression struct {
-	Token    token.Token
-	Operator string
-	Right    Expression
-}
-
-func (cp *ColumnPrefixExpression) expressionNode()      {}
-func (cp *ColumnPrefixExpression) TokenLiteral() string { return cp.Token.Literal }
-func (cp *ColumnPrefixExpression) String() string {
-	var out bytes.Buffer
-
-	out.WriteString("(")
-	out.WriteString(cp.Operator)
-	out.WriteString(cp.Right.String())
-	out.WriteString(")")
-
-	return out.String()
 }
 
 func (pe *PrefixExpression) expressionNode()      {}
@@ -197,31 +157,6 @@ func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
 
-type IfExpression struct {
-	Token       token.Token
-	Condition   Expression
-	Consequence *BlockStatement
-	Alternative *BlockStatement
-}
-
-func (ie *IfExpression) expressionNode()      {}
-func (ie *IfExpression) TokenLiteral() string { return ie.Token.Literal }
-func (ie *IfExpression) String() string {
-	var out bytes.Buffer
-
-	out.WriteString("if")
-	out.WriteString(ie.Condition.String())
-	out.WriteString(" ")
-	out.WriteString(ie.Consequence.String())
-
-	if ie.Alternative != nil {
-		out.WriteString("else ")
-		out.WriteString(ie.Alternative.String())
-	}
-
-	return out.String()
-}
-
 type CallExpression struct {
 	Token     token.Token
 	Function  Expression
@@ -255,10 +190,26 @@ func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 func (sl *StringLiteral) String() string       { return sl.Token.Literal }
 
-type ColumnCall struct {
-	Token token.Token
+// @ token
+// Can reference the last Column or be used as a function to call a column
+type Reference struct {
+	Token     token.Token
+	Parameter *Identifier
 }
 
-func (cc *ColumnCall) expressionNode()      {}
-func (cc *ColumnCall) TokenLiteral() string { return cc.Token.Literal }
-func (cc *ColumnCall) String() string       { return cc.Token.Literal }
+func (r *Reference) expressionNode()      {}
+func (r *Reference) TokenLiteral() string { return r.Token.Literal }
+func (r *Reference) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("@")
+	if r.Parameter == nil {
+		return out.String()
+	}
+
+	out.WriteString("(")
+	out.WriteString(r.Parameter.String())
+	out.WriteString(")")
+
+	return out.String()
+}
