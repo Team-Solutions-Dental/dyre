@@ -538,8 +538,8 @@ func TestReferenceLiteral(t *testing.T) {
 		t.Errorf("literal not %q. got=%q, ", "hello word", ref.TokenLiteral())
 	}
 
-	if ref.Parameter != nil {
-		t.Errorf("got unexpected parameter. got=%v, ", ref.Parameter)
+	if ref.Argument != nil {
+		t.Errorf("got unexpected parameter. got=%v, ", ref.Argument)
 	}
 
 	if ref.String() != input {
@@ -549,7 +549,7 @@ func TestReferenceLiteral(t *testing.T) {
 }
 
 func TestReferenceFunction(t *testing.T) {
-	input := `@(column)`
+	input := `@('column')`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -563,15 +563,69 @@ func TestReferenceFunction(t *testing.T) {
 	}
 
 	if ref.TokenLiteral() != "@" {
-		t.Errorf("literal not %q. got=%q, ", "hello word", ref.TokenLiteral())
+		t.Errorf("literal not '%q'. got='%q', ", "hello word", ref.TokenLiteral())
 	}
 
-	if ref.Parameter == nil {
-		t.Errorf("Missing parameter.")
+	if ref.Argument == nil {
+		t.Errorf("Missing Argument.")
 	}
 
 	if ref.String() != input {
 		t.Errorf("got unexpected parsing string . got=%s, ", ref.String())
+	}
+
+}
+
+func TestColumnFunction(t *testing.T) {
+	input := `AS('year', datepart('year', @('CreateDate'))): `
+
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	fn, ok := query.Statements[0].(*ast.ColumnFunction)
+	if !ok {
+		t.Fatalf("exp not *ast.Reference. got=%T", query.Statements[0])
+	}
+
+	if fn.TokenLiteral() != "AS" {
+		t.Errorf("literal not '%q'. got='%q', ", "AS", fn.TokenLiteral())
+	}
+
+	if fn.Arguments == nil {
+		t.Errorf("Missing Arguments.")
+	}
+
+	if fn.String() != input {
+		t.Errorf("got unexpected parsing output string. \nwant = '%s' \ngot  = '%s'", input, fn.String())
+	}
+
+}
+
+func TestGroupFunction(t *testing.T) {
+	input := `GROUP('Year'): `
+
+	l := lexer.New(input)
+	p := New(l)
+	query := p.ParseQuery()
+	checkParserErrors(t, p)
+
+	fn, ok := query.Statements[0].(*ast.GroupFunction)
+	if !ok {
+		t.Fatalf("exp not *ast.Reference. got=%T", query.Statements[0])
+	}
+
+	if fn.TokenLiteral() != "GROUP" {
+		t.Errorf("literal not '%q'. got='%q', ", "GROUP", fn.TokenLiteral())
+	}
+
+	if fn.Arguments == nil {
+		t.Errorf("Missing Arguments.")
+	}
+
+	if fn.String() != input {
+		t.Errorf("got unexpected parsing output string. \nwant = '%s' \ngot  = '%s'", input, fn.String())
 	}
 
 }

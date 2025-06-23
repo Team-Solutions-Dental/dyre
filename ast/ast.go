@@ -59,6 +59,63 @@ func (cs *ColumnLiteral) String() string {
 	return out.String()
 }
 
+// The call of a Column Function into the output
+// Ex. AS('isTrue', @('true'))
+// Ex. AS('year', datepart('year', @('Created')))
+type ColumnFunction struct {
+	Token     token.Token
+	Fn        string
+	Arguments []Expression
+}
+
+func (cf *ColumnFunction) statementNode()       {}
+func (cf *ColumnFunction) TokenLiteral() string { return cf.Token.Literal }
+func (cf *ColumnFunction) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(cf.TokenLiteral())
+	out.WriteString("(")
+
+	args := []string{}
+	for _, a := range cf.Arguments {
+		args = append(args, a.String())
+	}
+
+	out.WriteString(strings.Join(args, ", "))
+
+	out.WriteString(")")
+	out.WriteString(": ")
+	return out.String()
+}
+
+// The call of a Group Function into the output
+// Ex. GROUP('Active'): AVG('AvgSales', @('Sales')):
+type GroupFunction struct {
+	Token     token.Token
+	Fn        string
+	Arguments []Expression
+}
+
+func (cs *GroupFunction) statementNode()       {}
+func (cs *GroupFunction) TokenLiteral() string { return cs.Token.Literal }
+func (cs *GroupFunction) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(cs.TokenLiteral())
+	out.WriteString("(")
+
+	args := []string{}
+	for _, a := range cs.Arguments {
+		args = append(args, a.String())
+	}
+
+	out.WriteString(strings.Join(args, ", "))
+
+	out.WriteString(")")
+	out.WriteString(": ")
+	return out.String()
+}
+
 type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
@@ -188,13 +245,15 @@ type StringLiteral struct {
 
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
-func (sl *StringLiteral) String() string       { return sl.Token.Literal }
+func (sl *StringLiteral) String() string {
+	return "'" + sl.Token.Literal + "'"
+}
 
 // @ token
 // Can reference the last Column or be used as a function to call a column
 type Reference struct {
-	Token     token.Token
-	Parameter *Identifier
+	Token    token.Token
+	Argument Expression
 }
 
 func (r *Reference) expressionNode()      {}
@@ -203,12 +262,12 @@ func (r *Reference) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("@")
-	if r.Parameter == nil {
+	if r.Argument == nil {
 		return out.String()
 	}
 
 	out.WriteString("(")
-	out.WriteString(r.Parameter.String())
+	out.WriteString(r.Argument.String())
 	out.WriteString(")")
 
 	return out.String()

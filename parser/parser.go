@@ -120,6 +120,10 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch {
 	case p.curTokenIs(token.IDENT) && p.peekTokenIs(token.COLON):
 		return p.parseColumnLiteral()
+	case p.curTokenIs(token.COLUMN):
+		return p.parseColumnFunction()
+	case p.curTokenIs(token.GROUP):
+		return p.parseGroupFunction()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -138,6 +142,45 @@ func (p *Parser) parseColumnLiteral() *ast.ColumnLiteral {
 	}
 
 	return lit
+}
+
+func (p *Parser) parseColumnFunction() *ast.ColumnFunction {
+	funct := &ast.ColumnFunction{Token: p.curToken, Fn: p.curToken.Literal}
+
+	if !p.peekTokenIs(token.LPAREN) {
+		p.peekError(token.LPAREN)
+		return nil
+	}
+
+	p.nextToken()
+
+	funct.Arguments = p.parseCallArguments()
+
+	if !p.peekTokenIs(token.COLON) {
+		p.peekError(token.COLON)
+		return nil
+	}
+
+	p.nextToken()
+
+	return funct
+}
+
+func (p *Parser) parseGroupFunction() *ast.GroupFunction {
+	funct := &ast.GroupFunction{Token: p.curToken, Fn: p.curToken.Literal}
+
+	p.nextToken()
+
+	funct.Arguments = p.parseCallArguments()
+
+	if !p.peekTokenIs(token.COLON) {
+		p.peekError(token.COLON)
+		return nil
+	}
+
+	p.nextToken()
+
+	return funct
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
@@ -330,6 +373,7 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	return args
 }
 
+// parse @ or @(arg) where arg is string
 func (p *Parser) parseReference() ast.Expression {
 	ref := &ast.Reference{Token: p.curToken}
 
@@ -340,7 +384,7 @@ func (p *Parser) parseReference() ast.Expression {
 	p.nextToken()
 	p.nextToken()
 
-	ref.Parameter = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	ref.Argument = p.parseStringLiteral()
 
 	if !p.expectPeek(token.RPAREN) {
 		return nil
@@ -350,6 +394,8 @@ func (p *Parser) parseReference() ast.Expression {
 
 }
 
+// Casts a prefix expression as an infix expression assuming a column is being referenced
+// Col: != NULL -> Col: @ != NULL
 func (p *Parser) parseColumnPrefixExpression() ast.Expression {
 	expression := &ast.InfixExpression{
 		Token:    p.curToken,

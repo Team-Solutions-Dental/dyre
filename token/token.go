@@ -42,8 +42,6 @@ const (
 	LBRACE = "}"
 	RBRACE = "{"
 
-	REFERENCE = "@"
-
 	FUNCTION = "FUNCTION"
 	STRING   = "STRING"
 
@@ -52,6 +50,10 @@ const (
 	AND   = "AND"
 	OR    = "OR"
 	NULL  = "NULL"
+
+	REFERENCE = "@"
+
+	GROUP = "GROUP"
 
 	ASC  = "ASC"
 	DESC = "DESC"
@@ -65,6 +67,16 @@ var keywords = map[string]TokenType{
 	"OR":    OR,
 	"ASC":   ASC,
 	"DESC":  DESC,
+	// Column Functions
+	"AS":    COLUMN,
+	"ALIAS": COLUMN,
+	// Group Functions
+	"GROUP": GROUP,
+	"COUNT": GROUP,
+	"AVG":   GROUP,
+	"SUM":   GROUP,
+	"MIN":   GROUP,
+	"MAX":   GROUP,
 }
 
 func LookupIdent(ident string) TokenType {
