@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectType"
 )
 
 func TestSingleJoins(t *testing.T) {
@@ -61,8 +61,8 @@ func testNewParent(input string) (*PrimaryIR, error) {
 		Fields:     map[string]endpoint.Field{},
 	}
 
-	parent.Fields["intx"] = endpoint.Field{Endpoint: parent, Name: "intx", FieldType: object.INTEGER_OBJ}
-	parent.Fields["string"] = endpoint.Field{Endpoint: parent, Name: "string", FieldType: object.STRING_OBJ}
+	parent.Fields["intx"] = endpoint.Field{Endpoint: parent, Name: "intx", FieldType: objectType.INTEGER}
+	parent.Fields["string"] = endpoint.Field{Endpoint: parent, Name: "string", FieldType: objectType.STRING}
 
 	join := &endpoint.Endpoint{
 		Service:    service,
@@ -73,8 +73,8 @@ func testNewParent(input string) (*PrimaryIR, error) {
 		Fields:     map[string]endpoint.Field{},
 	}
 
-	join.Fields["inty"] = endpoint.Field{Endpoint: join, Name: "inty", FieldType: object.INTEGER_OBJ}
-	join.Fields["bool"] = endpoint.Field{Endpoint: join, Name: "bool", FieldType: object.BOOLEAN_OBJ}
+	join.Fields["inty"] = endpoint.Field{Endpoint: join, Name: "inty", FieldType: objectType.INTEGER}
+	join.Fields["bool"] = endpoint.Field{Endpoint: join, Name: "bool", FieldType: objectType.BOOLEAN}
 
 	service.Endpoints["Parent"] = parent
 	service.Endpoints["Join"] = join
@@ -129,7 +129,7 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 		TableName:  "X",
 		FieldNames: []string{"x"},
 		Fields: map[string]endpoint.Field{
-			"x": {Name: "x", FieldType: object.STRING_OBJ},
+			"x": {Name: "x", FieldType: objectType.STRING},
 		},
 	}
 
@@ -139,8 +139,8 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 		TableName:  "XY",
 		FieldNames: []string{"x", "y"},
 		Fields: map[string]endpoint.Field{
-			"x": {Name: "x", FieldType: object.STRING_OBJ},
-			"y": {Name: "y", FieldType: object.STRING_OBJ},
+			"x": {Name: "x", FieldType: objectType.STRING},
+			"y": {Name: "y", FieldType: objectType.STRING},
 		},
 	}
 	yz := endpoint.Endpoint{
@@ -149,8 +149,8 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 		TableName:  "YZ",
 		FieldNames: []string{"y", "z"},
 		Fields: map[string]endpoint.Field{
-			"y": {Name: "y", FieldType: object.STRING_OBJ},
-			"z": {Name: "z", FieldType: object.STRING_OBJ},
+			"y": {Name: "y", FieldType: objectType.STRING},
+			"z": {Name: "z", FieldType: objectType.STRING},
 		},
 	}
 

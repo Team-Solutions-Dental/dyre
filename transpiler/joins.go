@@ -126,7 +126,6 @@ func (js *joinIR) Check() error {
 	if childLoc < 0 {
 		childField := js.childIR.endpoint.Fields[js.childOn]
 		ss := childField.SelectStatement()
-		ss.Exclude = true
 		js.childIR.sql.SelectStatements = append(js.childIR.sql.SelectStatements, ss)
 	}
 
