@@ -3,18 +3,23 @@ package sql
 import (
 	"fmt"
 	"strings"
+
+	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectType"
 )
 
 type Query struct {
-	SelectStatements  []*SelectStatement
-	Limit             *int
-	From              string
-	TableName         string
-	WhereStatements   []string
-	JoinStatements    []*JoinStatement
-	GroupByStatements []string
-	Depth             int
-	OrderBy           []*OrderByStatement
+	SelectStatements     []SelectStatement
+	AliasWhereStatements []string
+	Limit                *int
+	From                 string
+	TableName            string
+	WhereStatements      []string
+	JoinStatements       []*JoinStatement
+	GroupByStatements    []string
+	HavingStatements     []string
+	Depth                int
+	OrderBy              []*OrderByStatement
 }
 
 func (q *Query) ConstructQuery() string {
@@ -37,6 +42,13 @@ func (q *Query) ConstructQuery() string {
 		query = query + whereConstructor(q.WhereStatements)
 	}
 
+	if len(q.GroupByStatements) > 0 {
+		query = query + groupByConstructor(q.GroupByStatements)
+		if len(q.HavingStatements) > 0 {
+			query = query + havingConstructor(q.HavingStatements)
+		}
+	}
+
 	if q.Depth == 0 && len(q.OrderBy) > 0 {
 		query = query + orderByConstructor(q.OrderBy)
 	}
@@ -47,20 +59,16 @@ func (q *Query) ConstructQuery() string {
 func (q *Query) SelectNameList() []string {
 	var fields []string
 	for _, ss := range q.SelectStatements {
-		if !ss.Exclude {
-			fields = append(fields, ss.Name())
-		}
+		fields = append(fields, ss.Name())
 	}
 	return fields
 }
 
+// Check for same Name or Alias
 func (q *Query) SelectStatementLocation(input string) int {
-	for i, ss := range q.SelectStatements {
-		if ss.Alias != nil && *ss.Alias == input {
-			return i
-		}
-
-		if ss.FieldName != nil && *ss.FieldName == input {
+	names := q.SelectNameList()
+	for i, name := range names {
+		if name == input {
 			return i
 		}
 	}
@@ -70,33 +78,69 @@ func (q *Query) SelectStatementLocation(input string) int {
 func (q *Query) selectConstructor() string {
 	var selectStrings []string
 	for _, ss := range q.SelectStatements {
-		if !ss.Exclude || q.Depth != 0 {
-			selectStrings = append(selectStrings, ss.SelectCall())
-		}
+		selectStrings = append(selectStrings, ss.Statement())
 	}
 
 	return strings.Join(selectStrings, ", ")
 }
 
-type SelectStatement struct {
+// TODO: Type should be enum
+type SelectStatement interface {
+	Type() string
+	ObjectType() objectType.Type
+	Name() string
+	Statement() string
+}
+
+type SelectField struct {
 	FieldName *string
 	TableName *string
-	Alias     *string
-	Exclude   bool
+	ObjType   objectType.Type
 }
 
-func (ss *SelectStatement) SelectCall() string {
-	if ss.Alias != nil {
-		return fmt.Sprintf("(%s.[%s]) AS %s", *ss.TableName, *ss.FieldName, *ss.Alias)
-	}
-	return fmt.Sprintf("%s.[%s]", *ss.TableName, *ss.FieldName)
+func (sf *SelectField) Type() string                { return "FIELD" }
+func (sf *SelectField) ObjectType() objectType.Type { return sf.ObjType }
+func (sf *SelectField) Name() string                { return *sf.FieldName }
+func (sf *SelectField) Statement() string {
+	return fmt.Sprintf("%s.[%s]", *sf.TableName, *sf.FieldName)
 }
 
-func (ss *SelectStatement) Name() string {
-	if ss.Alias != nil {
-		return *ss.Alias
-	}
-	return *ss.FieldName
+type SelectExpression struct {
+	Expression object.Object
+	Alias      *string
+}
+
+func (se *SelectExpression) Type() string                { return "EXPRESSION" }
+func (se *SelectExpression) ObjectType() objectType.Type { return se.Expression.Type() }
+func (se *SelectExpression) Name() string                { return *se.Alias }
+func (se *SelectExpression) Statement() string {
+	return fmt.Sprintf("( %s ) AS %s", se.Expression.String(), *se.Alias)
+}
+
+type SelectGroupField struct {
+	FieldName *string
+	TableName *string
+	ObjType   objectType.Type
+}
+
+func (sgf *SelectGroupField) Type() string                { return "GROUP_FIELD" }
+func (sgf *SelectGroupField) ObjectType() objectType.Type { return sgf.ObjType }
+func (sgf *SelectGroupField) Name() string                { return *sgf.FieldName }
+func (sgf *SelectGroupField) Statement() string {
+	return fmt.Sprintf("%s.[%s]", *sgf.TableName, *sgf.FieldName)
+}
+
+type SelectGroupExpression struct {
+	Expression object.Object
+	Fn         *string
+	Alias      *string
+}
+
+func (sge *SelectGroupExpression) Type() string                { return "GROUP_EXPRESSION" }
+func (sge *SelectGroupExpression) ObjectType() objectType.Type { return sge.Expression.Type() }
+func (sge *SelectGroupExpression) Name() string                { return *sge.Alias }
+func (sge *SelectGroupExpression) Statement() string {
+	return fmt.Sprintf("%s AS %s", sge.Expression.String(), *sge.Alias)
 }
 
 type JoinStatement struct {
@@ -143,6 +187,32 @@ func whereConstructor(statements []string) string {
 		where = where + " AND " + statements[i]
 	}
 	return where
+}
+
+func havingConstructor(statements []string) string {
+	where := ""
+	if len(statements) < 1 {
+		return where
+	}
+
+	if len(statements) == 1 {
+		where = fmt.Sprintf(" HAVING %s", statements[0])
+		return where
+	}
+	where = fmt.Sprintf(" HAVING %s", statements[0])
+	for i := 1; i < len(statements); i++ {
+		where = where + " AND " + statements[i]
+	}
+	return where
+}
+
+func groupByConstructor(statements []string) string {
+	var groupByStrings []string
+	for _, s := range statements {
+		groupByStrings = append(groupByStrings, s)
+	}
+
+	return " GROUP BY " + strings.Join(groupByStrings, ", ")
 }
 
 type OrderByStatement struct {
