@@ -417,7 +417,7 @@ func evalInfixExpression(
 	case operator == "<=":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
-			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
+			Value:          fmt.Sprintf("(%s <= %s)", left.String(), right.String())}
 	case operator == "AND":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
