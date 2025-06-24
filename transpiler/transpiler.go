@@ -9,6 +9,8 @@ import (
 	"github.com/vamuscari/dyre/endpoint"
 	"github.com/vamuscari/dyre/lexer"
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectRef"
+	"github.com/vamuscari/dyre/object/objectType"
 	"github.com/vamuscari/dyre/parser"
 	"github.com/vamuscari/dyre/sql"
 	"github.com/vamuscari/dyre/utils"
@@ -17,10 +19,10 @@ import (
 // Intermediate Representation
 type IR struct {
 	endpoint               *endpoint.Endpoint
-	currentField           *endpoint.Field
-	currentSelectStatement *sql.SelectStatement
+	currentSelectStatement sql.SelectStatement
 	ast                    *ast.RequestStatements
 	sql                    *sql.Query
+	isGroup                *bool
 	joins                  []*joinIR
 	error                  error
 }
@@ -57,8 +59,22 @@ func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	var ir SubIR = SubIR{IR: IR{endpoint: endpoint,
 		ast:   q,
 		error: err,
-		sql:   &sql.Query{Depth: 0}}}
+		sql:   &sql.Query{Depth: 1}}}
 	return &ir, err
+}
+
+// Check if ir is group. If nil set value
+func (ir *IR) checkGroup(expected bool) bool {
+	if ir.isGroup == nil {
+		ir.isGroup = &expected
+		return true
+	}
+
+	if expected == *ir.isGroup {
+		return true
+	}
+
+	return false
 }
 
 func parse(req string) (*ast.RequestStatements, error) {
@@ -103,6 +119,9 @@ func (pir *PrimaryIR) FieldNames() []string {
 	return pir.sql.SelectNameList()
 }
 
+// Eval Table Query
+// Evaluate only top level query since this runs recursivly.
+// Evaluates joins then evalueates parent and adds fields into parent
 func (ir *IR) evalTable() object.Object {
 	if ir.endpoint.SchemaName != "" {
 		ir.sql.From = ir.endpoint.SchemaName + "." + ir.endpoint.TableName
@@ -112,6 +131,7 @@ func (ir *IR) evalTable() object.Object {
 
 	ir.sql.TableName = ir.endpoint.TableName
 
+	// Eval Joins Before Parent
 	for _, js := range ir.joins {
 		result := js.childIR.evalTable()
 		if isError(result) {
@@ -119,23 +139,25 @@ func (ir *IR) evalTable() object.Object {
 		}
 	}
 
-	result := eval(ir.ast, ir)
+	result := eval(ir.ast, ir, nil)
 	if isError(result) {
 		return result
 	}
 
+	// Add statements from joins into parent.
 	for _, j := range ir.joins {
 		for _, ss := range j.childIR.sql.SelectStatements {
+			// Ignore child joined on since parent should be referenced instead
 			if ss.Name() == j.childOn {
 				continue
 			}
 			fieldName := ss.Name()
-			joinedSelect := &sql.SelectStatement{
+			joinedSelect := sql.SelectField{
 				FieldName: &fieldName,
 				TableName: &j.alias,
-				Exclude:   ss.Exclude,
+				ObjType:   ss.ObjectType(),
 			}
-			ir.sql.SelectStatements = append(ir.sql.SelectStatements, joinedSelect)
+			ir.sql.SelectStatements = append(ir.sql.SelectStatements, &joinedSelect)
 		}
 
 		err := j.Check()
@@ -147,12 +169,16 @@ func (ir *IR) evalTable() object.Object {
 	return nil
 }
 
-func eval(node ast.Node, ir *IR) object.Object {
+func eval(node ast.Node, ir *IR, local *objectRef.LocalReferences) object.Object {
 	switch node := node.(type) {
 	case *ast.RequestStatements:
 		return evalQueryStatements(node, ir)
 	case *ast.ColumnLiteral:
 		return evalColumnLiteral(node, ir)
+	case *ast.ColumnFunction:
+		return evalColumnFunction(node, ir)
+	case *ast.GroupFunction:
+		return evalGroupFunction(node, ir)
 	case *ast.ExpressionStatement:
 		return evalExpressionStatement(node, ir)
 	case *ast.IntegerLiteral:
@@ -166,25 +192,25 @@ func eval(node ast.Node, ir *IR) object.Object {
 	// case *ast.Identifier:
 	// 	return "Identifier"
 	case *ast.PrefixExpression:
-		right := eval(node.Right, ir)
+		right := eval(node.Right, ir, local)
 		if isError(right) {
 			return right
 		}
-		return evalPrefixExpression(node.Operator, right)
+		return evalPrefixExpression(node.Operator, right, local)
 	case *ast.InfixExpression:
-		left := eval(node.Left, ir)
+		left := eval(node.Left, ir, local)
 		if isError(left) {
 			return left
 		}
-		right := eval(node.Right, ir)
+		right := eval(node.Right, ir, local)
 		if isError(right) {
 			return right
 		}
-		return evalInfixExpression(node.Operator, left, right)
+		return evalInfixExpression(node.Operator, left, right, local)
 	case *ast.Reference:
-		return evalColumnCall(node, ir)
+		return evalColumnCall(node, ir, local)
 	case *ast.CallExpression:
-		return evalCallExpression(node.Function.TokenLiteral(), node.Arguments, ir)
+		return evalCallExpression(node.Function.TokenLiteral(), node.Arguments, ir, local)
 	default:
 		return newError("Unknown Evaluation Type: %T", node)
 	}
@@ -194,8 +220,7 @@ func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	var result object.Object
 
 	for _, statement := range node.Statements {
-		result = eval(statement, ir)
-
+		result = eval(statement, ir, nil)
 		switch result := result.(type) {
 		case *object.Error:
 			return result
@@ -205,28 +230,35 @@ func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
 }
 
 func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
+	if !ir.checkGroup(false) {
+		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.TokenLiteral(), ir.endpoint.TableName)
+	}
 	if !utils.Array_Contains(ir.endpoint.FieldNames, node.TokenLiteral()) {
 		return newError("Requested column %s not found for %s", node.TokenLiteral(), ir.endpoint.TableName)
 	}
 
 	column := ir.endpoint.Fields[node.TokenLiteral()]
-	ir.currentField = &column
 
-	selectStatementLoc := ir.sql.SelectStatementLocation(ir.currentField.Name)
+	selectStatementLoc := ir.sql.SelectStatementLocation(column.Name)
 	if selectStatementLoc >= 0 {
-		newSelectStatementList := []*sql.SelectStatement{}
+		newSelectStatementList := []sql.SelectStatement{}
 		for i, ss := range ir.sql.SelectStatements {
 			if i != selectStatementLoc {
 				newSelectStatementList = append(newSelectStatementList, ss)
 			}
 		}
 
+		// Append duplicate column to end of list
 		newSelectStatementList = append(newSelectStatementList, ir.sql.SelectStatements[selectStatementLoc])
 		ir.currentSelectStatement = ir.sql.SelectStatements[selectStatementLoc]
 		ir.sql.SelectStatements = newSelectStatementList
 
 	} else {
-		selects := &sql.SelectStatement{FieldName: &ir.currentField.Name, TableName: &ir.endpoint.TableName, Exclude: false}
+		selects := &sql.SelectField{
+			FieldName: &column.Name,
+			TableName: &ir.endpoint.TableName,
+			ObjType:   column.FieldType,
+		}
 		ir.currentSelectStatement = selects
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, selects)
 	}
@@ -234,101 +266,165 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
 	return nil
 }
 
-func evalExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) object.Object {
+func evalColumnFunction(node *ast.ColumnFunction, ir *IR) object.Object {
+	if !ir.checkGroup(false) {
+		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
+	}
+	args := evalExpressions(node.Arguments, ir)
+
+	_, ok := columnFunctions[node.Fn]
+	if !ok {
+		return newError("Column Function '%s' not found", node.Fn)
+	}
+
+	return columnFunctions[node.Fn](ir, args...)
+}
+
+func evalGroupFunction(node *ast.GroupFunction, ir *IR) object.Object {
+	if !ir.checkGroup(true) {
+		return newError("Group '%s' cannot be called on Non-Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
+	}
+	args := evalExpressions(node.Arguments, ir)
+
+	_, ok := groupFunctions[node.Fn]
+	if !ok {
+		return newError("Group Function Function '%s' not found", node.Fn)
+	}
+
+	return groupFunctions[node.Fn](ir, args...)
+}
+
+func evalExpressionStatement(
+	stmnt *ast.ExpressionStatement,
+	ir *IR,
+) object.Object {
 
 	if stmnt.Expression == nil {
 		return nil
 	}
 
-	evaluated := eval(stmnt.Expression, ir)
+	local := objectRef.NewLocalReferences()
+
+	evaluated := eval(stmnt.Expression, ir, local)
 	if isError(evaluated) {
 		return evaluated
 	}
 
-	if evaluated.Type() == object.BOOLEAN_OBJ {
-		ir.sql.WhereStatements = append(ir.sql.WhereStatements, evaluated.String())
+	highest := local.Highest()
+
+	if highest == -1 {
+		return nil
+	}
+
+	if !local.AllSame() {
+		return newError("Not all references are the same type")
+	}
+
+	switch highest {
+	case objectRef.FIELD:
+		if evaluated.Type() == objectType.BOOLEAN {
+			ir.sql.WhereStatements = append(ir.sql.WhereStatements, evaluated.String())
+		}
+	case objectRef.EXPRESSION:
+		if evaluated.Type() == objectType.BOOLEAN {
+			ir.sql.AliasWhereStatements = append(ir.sql.AliasWhereStatements, evaluated.String())
+		}
+	case objectRef.GROUP:
+		if evaluated.Type() == objectType.BOOLEAN {
+			ir.sql.HavingStatements = append(ir.sql.HavingStatements, evaluated.String())
+		}
 	}
 
 	return nil
 
 }
 
-func evalPrefixExpression(operator string, right object.Object) object.Object {
+func evalPrefixExpression(
+	operator string,
+	right object.Object,
+	local *objectRef.LocalReferences,
+) object.Object {
 	switch operator {
 	case "!":
-		return evalBangOperatorExpression(right)
+		return evalBangOperatorExpression(right, local)
 	case "-":
-		return evalMinusPrefixOperatorExpression(right)
+		return evalMinusPrefixOperatorExpression(right, local)
 	default:
 		return newError("unknown operator: %s%s", operator, right.Type())
 	}
 }
 
-func evalBangOperatorExpression(right object.Object) object.Object {
+func evalBangOperatorExpression(
+	right object.Object,
+	local *objectRef.LocalReferences,
+) object.Object {
 	switch {
-	case right.Type() == object.BOOLEAN_OBJ:
+	case right.Type() == objectType.BOOLEAN:
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("!%s", right.String())}
 	default:
 		return newError("Invalid Bang Operator Expression %s", right.String())
 	}
 }
 
-func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
+func evalMinusPrefixOperatorExpression(
+	right object.Object,
+	local *objectRef.LocalReferences,
+) object.Object {
 	switch {
-	case right.Type() == object.INTEGER_OBJ:
+	case right.Type() == objectType.INTEGER:
 		return &object.Expression{
-			ExpressionType: object.INTEGER_OBJ,
-			Value:          fmt.Sprintf("-%s", right.String())}
-	case right.Type() == object.EXPRESSION_OBJ:
-		return &object.Expression{
-			ExpressionType: object.INTEGER_OBJ,
+			ExpressionType: objectType.INTEGER,
 			Value:          fmt.Sprintf("-%s", right.String())}
 	default:
 		return newError("Invalid Minus Prefix Operator Expression %s", right.String())
 	}
 }
 
-func evalInfixExpression(operator string, left, right object.Object) object.Object {
+func evalInfixExpression(
+	operator string,
+	left, right object.Object,
+	local *objectRef.LocalReferences,
+) object.Object {
 	switch {
-	case left.Type() == object.NULL_OBJ:
-		return evalInfixNullExpression(operator, right, left)
-	case right.Type() == object.NULL_OBJ:
-		return evalInfixNullExpression(operator, left, right)
-	// case left.Type() == object.NULL_OBJ || right.Type() == object.NULL_OBJ:
+	case left.Type() == objectType.NULL:
+		return evalInfixNullExpression(operator, right, left, local)
+	case right.Type() == objectType.NULL:
+		return evalInfixNullExpression(operator, left, right, local)
+	// case left.Type() == objectType.NULL || right.Type() == object.NULL_OBJ:
 	// 	return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	case operator == "==":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s = %s)", left.String(), right.String())}
 	case operator == "!=":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s != %s)", left.String(), right.String())}
 	case operator == ">":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s > %s)", left.String(), right.String())}
 	case operator == "<":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s < %s)", left.String(), right.String())}
 	case operator == ">=":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
 	case operator == "<=":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
 	case operator == "AND":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s AND %s)", left.String(), right.String())}
 	case operator == "OR":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s OR %s)", left.String(), right.String())}
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
@@ -336,17 +432,21 @@ func evalInfixExpression(operator string, left, right object.Object) object.Obje
 }
 
 // TODO: Check for Nullable
-func evalInfixNullExpression(operator string, ref, null object.Object) object.Object {
+func evalInfixNullExpression(
+	operator string,
+	ref, null object.Object,
+	local *objectRef.LocalReferences,
+) object.Object {
 	switch {
-	case ref.Type() == object.NULL_OBJ:
+	case ref.Type() == objectType.NULL:
 		return newError("NULL cannot be compared to NULL")
 	case operator == "==":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s IS %s)", ref.String(), null.String())}
 	case operator == "!=":
 		return &object.Expression{
-			ExpressionType: object.BOOLEAN_OBJ,
+			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s IS NOT %s)", ref.String(), null.String())}
 	default:
 		return newError("unknown operator: %s %s %s", ref.Type(), operator, null.Type())
@@ -354,19 +454,62 @@ func evalInfixNullExpression(operator string, ref, null object.Object) object.Ob
 }
 
 // Evaluate @ for expressions
-func evalColumnCall(node *ast.Reference, ir *IR) object.Object {
+// WARN: Cannot call alias
+func evalColumnCall(
+	node *ast.Reference,
+	ir *IR,
+	local *objectRef.LocalReferences,
+) object.Object {
 
-	if node.Parameter == nil && ir.currentField == nil {
+	if node.Argument == nil && ir.currentSelectStatement == nil {
 		return newError("Invalid Column Call, %s", "No current field specified or referenced")
 	}
 
-	if node.Parameter == nil {
-		return &object.FieldCall{FieldType: ir.currentField.Type(),
-			Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentField.Name)}
+	if local == nil {
+		return newError("Invalid Column Call '%s', %s", node.String(), "Missing Local References")
 	}
 
-	return &object.FieldCall{FieldType: object.STRING_OBJ,
-		Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, node.Parameter.Value)}
+	if node.Argument == nil {
+		switch ir.currentSelectStatement.Type() {
+		case "FIELD":
+			local.Set(ir.currentSelectStatement.Name(), objectRef.FIELD)
+			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
+				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
+		case "EXPRESSION":
+			local.Set(ir.currentSelectStatement.Name(), objectRef.EXPRESSION)
+			se := ir.currentSelectStatement.(*sql.SelectExpression)
+			return se.Expression
+		case "GROUP_FIELD":
+			local.Set(ir.currentSelectStatement.Name(), objectRef.GROUP)
+			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
+				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
+		case "GROUP_EXPRESSION":
+			local.Set(ir.currentSelectStatement.Name(), objectRef.GROUP)
+			ge := ir.currentSelectStatement.(*sql.SelectGroupExpression)
+			return ge.Expression
+		}
+	}
+
+	eval := eval(node.Argument, ir, local)
+
+	if isError(eval) {
+		return eval
+	}
+
+	if eval.Type() != objectType.STRING {
+		return newError("Invalid Column Call Expression, type not string. got=%s", eval.Type())
+	}
+
+	str := eval.(*object.String)
+
+	field, ok := ir.endpoint.Fields[str.Value]
+	if !ok {
+		return newError("Invalid Column Call Expression, type not string. got=%s", eval.Type())
+	}
+
+	local.Set(field.Name, objectRef.FIELD)
+	return &object.Expression{ExpressionType: field.FieldType,
+		Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, str.Value)}
 
 }
 
@@ -376,7 +519,7 @@ func newError(format string, a ...interface{}) *object.Error {
 
 func isError(obj object.Object) bool {
 	if obj != nil {
-		return obj.Type() == object.ERROR_OBJ
+		return obj.Type() == objectType.ERROR
 	}
 	return false
 }
@@ -388,14 +531,20 @@ func evalExpressions(
 	var results []object.Object
 
 	for _, e := range exps {
-		evaluated := eval(e, ir)
+		local := objectRef.NewLocalReferences()
+		evaluated := eval(e, ir, local)
 		results = append(results, evaluated)
 	}
 
 	return results
 }
 
-func evalCallExpression(function string, exps []ast.Expression, ir *IR) object.Object {
+func evalCallExpression(
+	function string,
+	exps []ast.Expression,
+	ir *IR,
+	local *objectRef.LocalReferences,
+) object.Object {
 	args := evalExpressions(exps, ir)
 
 	_, ok := builtins[function]

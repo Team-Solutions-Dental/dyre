@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectType"
 )
 
 func TestEvalQueries(t *testing.T) {
@@ -12,24 +12,19 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"int:", "SELECT Test.[int] FROM dbo.Test"},                                                                                 // Basic Request
-		{"int:string:bool:", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test"},                                         // Chain Column
-		{"int:;string:;int:", "SELECT Test.[string], Test.[int] FROM dbo.Test"},                                                     // Reorder
-		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                              // @ reference call
-		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                            // Boolean Comparison
-		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                 // Integer Comparison
-		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                       // OR Statement
-		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                     // AND Statement
-		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"}, // Function Call
-		{"bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                         // Exclude
-		{"int2:", "SELECT Test.[int2] FROM dbo.Test"},                                                                               // AlphaNumeric Column
-		{"string: alias('str');", "SELECT (Test.[string]) AS str FROM dbo.Test"},                                                    // alias
-		{"bool: == NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NULL)"},                                          // IS NULL
-		{"bool: != NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NOT NULL)"},                                      // IS NOT NULL
-		{"@(string) != NULL; bool: == false;", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},                        // @() reference function
-
-		// {"alias('test');bool: exclude(@); == true;string:", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] = 1)"},           // TableFunction
-		// {"int: @ == 5 string: @ != NULL", "SELECT Test.[int], Test.[string] FROM dbo.Test WHERE (Test.[int] = 5) AND (Test.[string] != NULL)"}, // NULL Comparison
+		{"int:", "SELECT Test.[int] FROM dbo.Test"},                                                                                          // Basic Request
+		{"int:string:bool:", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test"},                                                  // Chain Column
+		{"int:;string:;int:", "SELECT Test.[string], Test.[int] FROM dbo.Test"},                                                              // Reorder
+		{"string: @ == 'Hello'", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[string] = 'Hello')"},                                       // @ reference call
+		{"bool: @ == FALSE", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] = 0)"},                                                     // Boolean Comparison
+		{"int: int: > 5", "SELECT Test.[int] FROM dbo.Test WHERE (Test.[int] > 5)"},                                                          // Integer Comparison
+		{"int: > 5 OR < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) OR (Test.[int] < 10))"},                                // OR Statement
+		{"int: > 5 AND < 10", "SELECT Test.[int] FROM dbo.Test WHERE ((Test.[int] > 5) AND (Test.[int] < 10))"},                              // AND Statement
+		{"date: @ == date('01/02/2023')", "SELECT Test.[date] FROM dbo.Test WHERE (Test.[date] = CONVERT(date, '01/02/2023', 23))"},          // Function Call
+		{"int2:", "SELECT Test.[int2] FROM dbo.Test"},                                                                                        // AlphaNumeric Column
+		{"bool: == NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NULL)"},                                                   // IS NULL
+		{"bool: != NULL;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[bool] IS NOT NULL)"},                                               // IS NOT NULL
+		{"@('string') != NULL; bool: == false;", "SELECT Test.[bool] FROM dbo.Test WHERE (Test.[string] IS NOT NULL) AND (Test.[bool] = 0)"}, // @() reference function
 	}
 
 	for _, tt := range tests {
@@ -87,11 +82,11 @@ func testNew(input string) (*PrimaryIR, error) {
 				SchemaName: "dbo",
 				FieldNames: []string{"int", "int2", "string", "bool", "date"},
 				Fields: map[string]endpoint.Field{
-					"int":    {Name: "int", FieldType: object.INTEGER_OBJ, Nullable: true},
-					"int2":   {Name: "int2", FieldType: object.INTEGER_OBJ, Nullable: true},
-					"string": {Name: "string", FieldType: object.STRING_OBJ, Nullable: true},
-					"bool":   {Name: "bool", FieldType: object.BOOLEAN_OBJ, Nullable: true},
-					"date":   {Name: "date", FieldType: object.DATE_OBJ, Nullable: true},
+					"int":    {Name: "int", FieldType: objectType.INTEGER, Nullable: true},
+					"int2":   {Name: "int2", FieldType: objectType.INTEGER, Nullable: true},
+					"string": {Name: "string", FieldType: objectType.STRING, Nullable: true},
+					"bool":   {Name: "bool", FieldType: objectType.BOOLEAN, Nullable: true},
+					"date":   {Name: "date", FieldType: objectType.DATE, Nullable: true},
 				},
 			},
 		},
