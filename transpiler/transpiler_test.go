@@ -94,6 +94,87 @@ func testNew(input string) (*PrimaryIR, error) {
 	return New(input, service.Endpoints["Test"])
 }
 
+func TestComparisonExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"a: > 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] > 5)"},   // GT >
+		{"a: < 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] < 5)"},   // LT <
+		{"a: >= 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] >= 5)"}, // GTE >=
+		{"a: <= 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] <= 5)"}, // LTE <=
+		{"a: == 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] = 5)"},  // EQ ==
+		{"a: != 5", "SELECT X.[a] FROM dbo.X WHERE (X.[a] != 5)"}, // NOT_EQ !=
+	}
+
+	for _, tt := range tests {
+		ir, err := testNewXYZ(tt.input)
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
+		sql_statement, err := ir.EvaluateQuery()
+
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
+
+		if sql_statement != tt.expected {
+			t.Errorf("Query failed. [%s]\n%s \n%s\n ", tt.input, sql_statement, tt.expected)
+		}
+	}
+}
+
+func testNewXYZ(input string) (*PrimaryIR, error) {
+	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
+	service.EndpointNames = []string{"X", "XY", "YZ"}
+
+	x := &endpoint.Endpoint{
+		Service:    service,
+		Name:       "X",
+		TableName:  "X",
+		SchemaName: "dbo",
+		FieldNames: []string{"x", "a"},
+		Fields:     map[string]endpoint.Field{},
+	}
+
+	x.Fields["x"] = endpoint.Field{Endpoint: x, Name: "x", FieldType: objectType.STRING, Nullable: true}
+	x.Fields["a"] = endpoint.Field{Endpoint: x, Name: "a", FieldType: objectType.INTEGER, Nullable: true}
+
+	xy := &endpoint.Endpoint{
+		Service:    service,
+		Name:       "XY",
+		TableName:  "XY",
+		SchemaName: "dbo",
+		FieldNames: []string{"x", "y", "a", "b"},
+		Fields:     map[string]endpoint.Field{},
+	}
+
+	xy.Fields["x"] = endpoint.Field{Endpoint: xy, Name: "x", FieldType: objectType.STRING, Nullable: true}
+	xy.Fields["y"] = endpoint.Field{Endpoint: xy, Name: "y", FieldType: objectType.STRING, Nullable: true}
+	xy.Fields["a"] = endpoint.Field{Endpoint: xy, Name: "a", FieldType: objectType.INTEGER, Nullable: true}
+	xy.Fields["b"] = endpoint.Field{Endpoint: xy, Name: "b", FieldType: objectType.INTEGER, Nullable: true}
+
+	yz := &endpoint.Endpoint{
+		Service:    service,
+		Name:       "YZ",
+		TableName:  "YZ",
+		SchemaName: "dbo",
+		FieldNames: []string{"y", "z", "b", "c"},
+		Fields:     map[string]endpoint.Field{},
+	}
+
+	yz.Fields["y"] = endpoint.Field{Endpoint: yz, Name: "y", FieldType: objectType.STRING, Nullable: true}
+	yz.Fields["z"] = endpoint.Field{Endpoint: yz, Name: "z", FieldType: objectType.STRING, Nullable: true}
+	yz.Fields["b"] = endpoint.Field{Endpoint: yz, Name: "b", FieldType: objectType.INTEGER, Nullable: true}
+	yz.Fields["c"] = endpoint.Field{Endpoint: yz, Name: "c", FieldType: objectType.INTEGER, Nullable: true}
+
+	service.Endpoints["X"] = x
+	service.Endpoints["XY"] = xy
+	service.Endpoints["YZ"] = yz
+
+	return New(input, service.Endpoints["X"])
+}
+
 // func TestEvalIntegerExpression(t *testing.T) {
 // 	integer := "5"
 // 	field := &endpoint.Field{

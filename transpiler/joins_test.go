@@ -92,7 +92,7 @@ func TestDoubleJoins(t *testing.T) {
 		"x:",
 		"x:y:",
 		"y:z:",
-		"SELECT X.[x], XY.[y], XY.[z] FROM X INNER JOIN ( SELECT XY.[x], XY.[y], YZ.[z] FROM XY INNER JOIN ( SELECT YZ.[y], YZ.[z] FROM YZ ) AS YZ ON XY.[y] = YZ.[y] ) AS XY ON X.[x] = XY.[x]",
+		"SELECT X.[x], XY.[y], XY.[z] FROM dbo.X INNER JOIN ( SELECT XY.[x], XY.[y], YZ.[z] FROM dbo.XY INNER JOIN ( SELECT YZ.[y], YZ.[z] FROM dbo.YZ ) AS YZ ON XY.[y] = YZ.[y] ) AS XY ON X.[x] = XY.[x]",
 	}
 
 	x, err := testNewXYZ(test.input_x)
@@ -118,45 +118,4 @@ func TestDoubleJoins(t *testing.T) {
 		t.Errorf("Double Join Failed\n %s\n %s\n", sql, test.expected)
 	}
 
-}
-
-func testNewXYZ(input string) (*PrimaryIR, error) {
-	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
-
-	x := endpoint.Endpoint{
-		Service:    service,
-		Name:       "X",
-		TableName:  "X",
-		FieldNames: []string{"x"},
-		Fields: map[string]endpoint.Field{
-			"x": {Name: "x", FieldType: objectType.STRING},
-		},
-	}
-
-	xy := endpoint.Endpoint{
-		Service:    service,
-		Name:       "XY",
-		TableName:  "XY",
-		FieldNames: []string{"x", "y"},
-		Fields: map[string]endpoint.Field{
-			"x": {Name: "x", FieldType: objectType.STRING},
-			"y": {Name: "y", FieldType: objectType.STRING},
-		},
-	}
-	yz := endpoint.Endpoint{
-		Service:    service,
-		Name:       "YZ",
-		TableName:  "YZ",
-		FieldNames: []string{"y", "z"},
-		Fields: map[string]endpoint.Field{
-			"y": {Name: "y", FieldType: objectType.STRING},
-			"z": {Name: "z", FieldType: objectType.STRING},
-		},
-	}
-
-	service.Endpoints["X"] = &x
-	service.Endpoints["XY"] = &xy
-	service.Endpoints["YZ"] = &yz
-
-	return New(input, service.Endpoints["X"])
 }
