@@ -68,8 +68,9 @@ var keywords = map[string]TokenType{
 	"ASC":   ASC,
 	"DESC":  DESC,
 	// Column Functions
-	"AS":    COLUMN,
-	"ALIAS": COLUMN,
+	"AS":      COLUMN,
+	"ALIAS":   COLUMN,
+	"EXCLUDE": COLUMN,
 	// Group Functions
 	"GROUP": GROUP,
 	"COUNT": GROUP,
