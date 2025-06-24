@@ -2,64 +2,42 @@ package object
 
 import (
 	"fmt"
-)
 
-type ObjectType string
-
-const (
-	INTEGER_OBJ    = "INTEGER"
-	FLOAT_OBJ      = "FLOAT"
-	BOOLEAN_OBJ    = "BOOLEAN"
-	STRING_OBJ     = "STRING"
-	DATE_OBJ       = "DATE"
-	DATETIME_OBJ   = "DATETIME"
-	EXPRESSION_OBJ = "EXPRESSION"
-	STATEMENT_OBJ  = "STATEMENT"
-	NULL_OBJ       = "NULL"
-	ERROR_OBJ      = "ERROR"
-	BUILTIN_OBJ    = "BUILTIN"
+	"github.com/vamuscari/dyre/object/objectType"
 )
 
 type Object interface {
-	Type() ObjectType
+	Type() objectType.Type
 	String() string
 }
 
 type Expression struct {
-	ExpressionType ObjectType
+	ExpressionType objectType.Type
 	Value          string
 }
 
-func (e *Expression) Type() ObjectType { return e.ExpressionType }
-func (e *Expression) String() string   { return e.Value }
-
-type FieldCall struct {
-	FieldType ObjectType
-	Value     string
-}
-
-func (fc *FieldCall) Type() ObjectType { return fc.FieldType }
-func (fc *FieldCall) String() string   { return fc.Value }
+func (e *Expression) Type() objectType.Type { return e.ExpressionType }
+func (e *Expression) String() string        { return e.Value }
 
 type Integer struct {
 	Value int64
 }
 
-func (i *Integer) Type() ObjectType { return INTEGER_OBJ }
-func (i *Integer) String() string   { return fmt.Sprintf("%d", i.Value) }
+func (i *Integer) Type() objectType.Type { return objectType.INTEGER }
+func (i *Integer) String() string        { return fmt.Sprintf("%d", i.Value) }
 
 type Float struct {
 	Value float64
 }
 
-func (f *Float) Type() ObjectType { return FLOAT_OBJ }
-func (f *Float) String() string   { return fmt.Sprintf("%f", f.Value) }
+func (f *Float) Type() objectType.Type { return objectType.FLOAT }
+func (f *Float) String() string        { return fmt.Sprintf("%f", f.Value) }
 
 type Boolean struct {
 	Value bool
 }
 
-func (b *Boolean) Type() ObjectType { return BOOLEAN_OBJ }
+func (b *Boolean) Type() objectType.Type { return objectType.BOOLEAN }
 func (b *Boolean) String() string {
 	if b.Value == true {
 		return "1"
@@ -69,22 +47,22 @@ func (b *Boolean) String() string {
 
 type Null struct{}
 
-func (n *Null) Type() ObjectType { return NULL_OBJ }
-func (n *Null) String() string   { return "NULL" }
+func (n *Null) Type() objectType.Type { return objectType.NULL }
+func (n *Null) String() string        { return "NULL" }
 
 type Error struct {
 	Message string
 }
 
-func (e *Error) Type() ObjectType { return ERROR_OBJ }
-func (e *Error) String() string   { return "ERROR: " + e.Message }
+func (e *Error) Type() objectType.Type { return objectType.ERROR }
+func (e *Error) String() string        { return "ERROR: " + e.Message }
 
 type String struct {
 	Value string
 }
 
-func (s *String) Type() ObjectType { return STRING_OBJ }
-func (s *String) String() string   { return fmt.Sprintf("'%s'", s.Value) }
+func (s *String) Type() objectType.Type { return objectType.STRING }
+func (s *String) String() string        { return fmt.Sprintf("'%s'", s.Value) }
 
 type BuiltinFunction func(args ...Object) Object
 
@@ -92,5 +70,5 @@ type Builtin struct {
 	Fn BuiltinFunction
 }
 
-func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
-func (b *Builtin) String() string   { return "Builtin function " }
+func (b *Builtin) Type() objectType.Type { return objectType.BUILTIN }
+func (b *Builtin) String() string        { return "Builtin function " }
