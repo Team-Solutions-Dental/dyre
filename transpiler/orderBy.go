@@ -40,8 +40,6 @@ func evalOrderBy(node ast.Node, ir *IR) object.Object {
 func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	var result object.Object
 
-	ir.currentField = nil
-
 	for _, statement := range node.Statements {
 		result = evalOrderBy(statement, ir)
 
