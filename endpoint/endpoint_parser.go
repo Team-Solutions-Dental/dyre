@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectType"
 	"github.com/vamuscari/dyre/utils"
 )
 
@@ -190,7 +190,7 @@ func parseField(f any, e *Endpoint) (Field, error) {
 
 }
 
-func parseFieldType(field_map map[string]any, default_type object.ObjectType) (object.ObjectType, error) {
+func parseFieldType(field_map map[string]any, default_type objectType.Type) (objectType.Type, error) {
 	fieldType, ok := field_map["type"]
 	if !ok {
 		return default_type, nil
@@ -321,27 +321,27 @@ func parseString(m map[string]any, index string) (string, error) {
 	return str, nil
 }
 
-func typeConvert(input string) (object.ObjectType, error) {
-	var output object.ObjectType
+func typeConvert(input string) (objectType.Type, error) {
+	var output objectType.Type
 	compare := strings.ToUpper(input)
 
 	switch compare {
 	case "STRING":
-		output = object.STRING_OBJ
+		output = objectType.STRING
 	case "BOOL":
-		output = object.BOOLEAN_OBJ
+		output = objectType.BOOLEAN
 	case "BOOLEAN":
-		output = object.BOOLEAN_OBJ
+		output = objectType.BOOLEAN
 	case "INT":
-		output = object.INTEGER_OBJ
+		output = objectType.INTEGER
 	case "INTEGER":
-		output = object.INTEGER_OBJ
+		output = objectType.INTEGER
 	case "FLOAT":
-		output = object.FLOAT_OBJ
+		output = objectType.FLOAT
 	case "DATE":
-		output = object.DATE_OBJ
+		output = objectType.DATE
 	case "DATETIME":
-		output = object.DATETIME_OBJ
+		output = objectType.DATETIME
 	default:
 		return output, errors.New("Unknown Type " + input)
 	}

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectType"
 	"github.com/vamuscari/dyre/sql"
 	"github.com/vamuscari/dyre/utils"
 )
 
-var default_type object.ObjectType = object.STRING_OBJ
+var default_type objectType.Type = objectType.STRING
 
 type Node interface {
 	JSON() string
@@ -149,11 +149,11 @@ type Field struct {
 	Node
 	Endpoint  *Endpoint
 	Name      string
-	FieldType object.ObjectType
+	FieldType objectType.Type
 	Nullable  bool
 }
 
-func (f *Field) Type() object.ObjectType { return f.FieldType }
+func (f *Field) Type() objectType.Type { return f.FieldType }
 
 func (f *Field) JSON() string {
 	var out bytes.Buffer
@@ -182,11 +182,10 @@ func (f *Field) TS() string {
 	return out.String()
 }
 
-func (f *Field) SelectStatement() *sql.SelectStatement {
-	return &sql.SelectStatement{
+func (f *Field) SelectStatement() sql.SelectStatement {
+	return &sql.SelectField{
 		FieldName: &f.Name,
 		TableName: &f.Endpoint.TableName,
-		Exclude:   f.Nullable,
 	}
 }
 
@@ -228,21 +227,21 @@ func (j *Join) ChildEndpoint() *Endpoint {
 	return j.childEndpoint
 }
 
-func objTypeToTsType(obj object.ObjectType) string {
+func objTypeToTsType(obj objectType.Type) string {
 	switch obj {
-	case object.STRING_OBJ:
+	case objectType.STRING:
 		return "string"
-	case object.BOOLEAN_OBJ:
+	case objectType.BOOLEAN:
 		return "boolean"
-	case object.INTEGER_OBJ:
+	case objectType.INTEGER:
 		return "number"
-	case object.FLOAT_OBJ:
+	case objectType.FLOAT:
 		return "number"
-	case object.DATETIME_OBJ:
+	case objectType.DATETIME:
 		return "Date"
-	case object.DATE_OBJ:
+	case objectType.DATE:
 		return "Date"
-	case object.NULL_OBJ:
+	case objectType.NULL:
 		return "null"
 	default:
 		return "string"
