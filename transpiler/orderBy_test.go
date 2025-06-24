@@ -13,6 +13,7 @@ func TestOrderBy(t *testing.T) {
 		{"int:", "int: ASC;", "SELECT Test.[int] FROM dbo.Test ORDER BY int ASC"},
 		{"int:string:bool:", "bool: DESC", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test ORDER BY bool DESC"},
 		{"int:;string:;int:", "int:", "SELECT Test.[string], Test.[int] FROM dbo.Test ORDER BY int ASC"},
+		{"int:;string:;int:", "int:ASC;string:DESC;", "SELECT Test.[string], Test.[int] FROM dbo.Test ORDER BY int ASC, string DESC"},
 	}
 
 	for _, tt := range tests {

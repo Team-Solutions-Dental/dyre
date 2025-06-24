@@ -31,12 +31,13 @@ func evalOrderBy(node ast.Node, ir *IR) object.Object {
 	case *ast.ExpressionStatement:
 		return evalOrderByExpressionStatement(node, ir)
 	case *ast.OrderExpression:
-		return evalOrderExpression(node, ir)
+		return evalOrderByExpression(node, ir)
 	default:
 		return newError("Unknown Order By Evaluation Type: %T", node)
 	}
 }
 
+// Eval Order By Request
 func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	var result object.Object
 
@@ -51,35 +52,51 @@ func evalOrderByStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	return result
 }
 
-func evalOrderByExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) object.Object {
+// Check for select statement and check if exists as field on endpoint
+// Assign select statement accordingly
+// Ex. ColumnName:
+func evalOrderByColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
 
-	if stmnt.Expression == nil {
-		ir.sql.OrderBy = append(ir.sql.OrderBy, &sql.OrderByStatement{Ascending: true, FieldName: ir.currentSelectStatement.Name()})
-		return nil
+	loc := ir.sql.SelectStatementLocation(node.TokenLiteral())
+	field, ok := ir.endpoint.Fields[node.TokenLiteral()]
+
+	if loc == -1 && !ok {
+		return newError("Order By '%s' not found", node.TokenLiteral())
 	}
+
+	if loc >= 0 {
+		ir.currentSelectStatement = ir.sql.SelectStatements[loc]
+	} else if ok {
+		ir.currentSelectStatement = field.SelectStatement()
+	}
+
+	// Add Order By.
+	// If an expression is never called an Order By is still added
+	ir.sql.OrderBy = append(
+		ir.sql.OrderBy,
+		&sql.OrderByStatement{Ascending: true, FieldName: ir.currentSelectStatement.Name()},
+	)
+
+	return nil
+}
+
+// Eval Expression statement.
+// Ex. expression;
+func evalOrderByExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) object.Object {
 
 	evaluated := evalOrderBy(stmnt.Expression, ir)
 	if isError(evaluated) {
 		return evaluated
 	}
 
-	// if evaluated.Type() == object.BOOLEAN_OBJ {
-	// 	ir.sql.WhereStatements = append(ir.sql.WhereStatements, evaluated.String())
-	// }
-
 	return nil
 
 }
 
-func evalOrderByColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
-	var result object.Object
-
-	ir.sql.OrderBy = append(ir.sql.OrderBy, &sql.OrderByStatement{Ascending: true, FieldName: ir.currentSelectStatement.Name()})
-
-	return result
-}
-
-func evalOrderExpression(node *ast.OrderExpression, ir *IR) object.Object {
+func evalOrderByExpression(node *ast.OrderExpression, ir *IR) object.Object {
+	if len(ir.sql.OrderBy) < 1 {
+		return nil
+	}
 
 	ir.sql.OrderBy[len(ir.sql.OrderBy)-1].Ascending = node.Ascending
 
