@@ -46,7 +46,7 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint,
 		ast:   q,
 		error: err,
-		sql:   &sql.Query{Depth: 0}}}
+		sql:   &sql.Query{}}}
 	return &ir, err
 }
 
@@ -59,7 +59,7 @@ func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	var ir SubIR = SubIR{IR: IR{endpoint: endpoint,
 		ast:   q,
 		error: err,
-		sql:   &sql.Query{Depth: 1}}}
+		sql:   &sql.Query{}}}
 	return &ir, err
 }
 
@@ -139,10 +139,14 @@ func (ir *IR) evalTable() object.Object {
 		}
 	}
 
-	result := eval(ir.ast, ir, nil)
+	local := objectRef.NewLocalReferences()
+
+	result := eval(ir.ast, ir, local)
 	if isError(result) {
 		return result
 	}
+
+	ir.sql.RefLevel = local.Highest()
 
 	// Add statements from joins into parent.
 	for _, j := range ir.joins {
@@ -172,15 +176,15 @@ func (ir *IR) evalTable() object.Object {
 func eval(node ast.Node, ir *IR, local *objectRef.LocalReferences) object.Object {
 	switch node := node.(type) {
 	case *ast.RequestStatements:
-		return evalQueryStatements(node, ir)
+		return evalQueryStatements(node, ir, local)
 	case *ast.ColumnLiteral:
-		return evalColumnLiteral(node, ir)
+		return evalColumnLiteral(node, ir, local)
 	case *ast.ColumnFunction:
-		return evalColumnFunction(node, ir)
+		return evalColumnFunction(node, ir, local)
 	case *ast.GroupFunction:
-		return evalGroupFunction(node, ir)
+		return evalGroupFunction(node, ir, local)
 	case *ast.ExpressionStatement:
-		return evalExpressionStatement(node, ir)
+		return evalExpressionStatement(node, ir, local)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.NullLiteral:
@@ -216,11 +220,11 @@ func eval(node ast.Node, ir *IR, local *objectRef.LocalReferences) object.Object
 	}
 }
 
-func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
+func evalQueryStatements(node *ast.RequestStatements, ir *IR, local *objectRef.LocalReferences) object.Object {
 	var result object.Object
 
 	for _, statement := range node.Statements {
-		result = eval(statement, ir, nil)
+		result = eval(statement, ir, local)
 		switch result := result.(type) {
 		case *object.Error:
 			return result
@@ -229,7 +233,7 @@ func evalQueryStatements(node *ast.RequestStatements, ir *IR) object.Object {
 	return result
 }
 
-func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
+func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalReferences) object.Object {
 	if !ir.checkGroup(false) {
 		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.TokenLiteral(), ir.endpoint.TableName)
 	}
@@ -266,11 +270,12 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR) object.Object {
 	return nil
 }
 
-func evalColumnFunction(node *ast.ColumnFunction, ir *IR) object.Object {
+func evalColumnFunction(node *ast.ColumnFunction, ir *IR, local *objectRef.LocalReferences) object.Object {
 	if !ir.checkGroup(false) {
 		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
 	}
-	local := objectRef.NewLocalReferences()
+
+	subRef := objectRef.NewLocalReferences()
 	args := evalExpressions(node.Arguments, ir, local)
 
 	_, ok := columnFunctions[node.Fn]
@@ -278,44 +283,49 @@ func evalColumnFunction(node *ast.ColumnFunction, ir *IR) object.Object {
 		return newError("Column Function '%s' not found", node.Fn)
 	}
 
+	local.Append(subRef)
+
 	return columnFunctions[node.Fn](ir, args...)
 }
 
-func evalGroupFunction(node *ast.GroupFunction, ir *IR) object.Object {
+func evalGroupFunction(node *ast.GroupFunction, ir *IR, local *objectRef.LocalReferences) object.Object {
 	if !ir.checkGroup(true) {
-		return newError("Group '%s' cannot be called on Non-Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
+		return newError("Group Function '%s' cannot be called on Non-Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
 	}
 
-	local := objectRef.NewLocalReferences()
-	args := evalExpressions(node.Arguments, ir, local)
+	subRef := objectRef.NewLocalReferences()
+	args := evalExpressions(node.Arguments, ir, subRef)
 
 	_, ok := groupFunctions[node.Fn]
 	if !ok {
 		return newError("Group Function Function '%s' not found", node.Fn)
 	}
 
-	return groupFunctions[node.Fn](ir, args...)
+	local.Append(subRef)
+
+	return groupFunctions[node.Fn](ir, local, args...)
 }
 
 func evalExpressionStatement(
 	stmnt *ast.ExpressionStatement,
 	ir *IR,
+	local *objectRef.LocalReferences,
 ) object.Object {
 
 	if stmnt.Expression == nil {
 		return nil
 	}
 
-	local := objectRef.NewLocalReferences()
+	subRef := objectRef.NewLocalReferences()
 
-	evaluated := eval(stmnt.Expression, ir, local)
+	evaluated := eval(stmnt.Expression, ir, subRef)
 	if isError(evaluated) {
 		return evaluated
 	}
 
-	highest := local.Highest()
+	highest := subRef.Highest()
 
-	if highest == -1 {
+	if highest <= objectRef.LITERAL {
 		return nil
 	}
 
@@ -337,6 +347,8 @@ func evalExpressionStatement(
 			ir.sql.HavingStatements = append(ir.sql.HavingStatements, evaluated.String())
 		}
 	}
+
+	local.Append(subRef)
 
 	return nil
 

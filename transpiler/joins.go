@@ -92,8 +92,6 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 		return nil, err
 	}
 
-	js.childIR.sql.Depth = js.parentIR.sql.Depth + 1
-
 	js.parentIR.joins = append(js.parentIR.joins, js)
 
 	joinStmnt := &sql.JoinStatement{

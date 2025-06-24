@@ -32,6 +32,7 @@ var columnFunctions = map[string]func(ir *IR, args ...object.Object) object.Obje
 
 		expr := &sql.SelectExpression{Alias: &name_obj.Value, Expression: expression}
 
+		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
 
 		return nil

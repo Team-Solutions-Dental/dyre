@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectRef"
 	"github.com/vamuscari/dyre/object/objectType"
 	"github.com/vamuscari/dyre/sql"
 )
 
-var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Object{
+var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object{
 	// GROUP(name)
-	"GROUP": func(ir *IR, args ...object.Object) object.Object {
+	"GROUP": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
@@ -32,6 +33,7 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		}
 
 		groupSelect := &sql.SelectGroupField{FieldName: &string_obj.Value, TableName: &ir.endpoint.TableName}
+		local.Set(groupSelect.Statement(), objectRef.GROUP)
 		ir.currentSelectStatement = groupSelect
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
 
@@ -40,7 +42,7 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		return nil
 	},
 	// COUNT(name, expression)
-	"COUNT": func(ir *IR, args ...object.Object) object.Object {
+	"COUNT": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "COUNT"
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -74,13 +76,15 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 
 		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
 
+		local.Set(expr.Statement(), objectRef.GROUP)
+
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
 
 		return nil
 	},
 	// SUM(name, expression)
-	"SUM": func(ir *IR, args ...object.Object) object.Object {
+	"SUM": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "SUM"
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -113,13 +117,14 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		}
 
 		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
 
 		return nil
 	},
-	"AVG": func(ir *IR, args ...object.Object) object.Object {
+	"AVG": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "AVG"
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -152,13 +157,14 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		}
 
 		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
 
 		return nil
 	},
-	"MIN": func(ir *IR, args ...object.Object) object.Object {
+	"MIN": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "MIN"
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -191,13 +197,14 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		}
 
 		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
 
 		return nil
 	},
-	"MAX": func(ir *IR, args ...object.Object) object.Object {
+	"MAX": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "MAX"
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -230,6 +237,7 @@ var groupFunctions = map[string]func(ir *IR, args ...object.Object) object.Objec
 		}
 
 		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)

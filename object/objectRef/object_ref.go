@@ -1,13 +1,16 @@
 package objectRef
 
-import "maps"
+import (
+	"fmt"
+	"maps"
+)
 
 const (
-	_ int = iota
-	LITERAL
-	FIELD
-	EXPRESSION
-	GROUP
+	_          int = iota
+	LITERAL        // 1
+	FIELD          // 2
+	EXPRESSION     // 3
+	GROUP          // 4
 )
 
 type LocalReferences struct {
@@ -16,6 +19,10 @@ type LocalReferences struct {
 
 func (lr *LocalReferences) Set(id string, ref int) {
 	lr.store[id] = ref
+}
+
+func (lr *LocalReferences) Get(id string) int {
+	return lr.store[id]
 }
 
 func NewLocalReferences() *LocalReferences {
@@ -48,6 +55,16 @@ func (lr *LocalReferences) AllSame() bool {
 	}
 
 	return true
+}
+
+func (lr *LocalReferences) List() []string {
+	list := []string{}
+
+	for i, v := range lr.store {
+		list = append(list, fmt.Sprintf("%s %d", i, v))
+	}
+
+	return list
 }
 
 func (lr *LocalReferences) Append(subRef *LocalReferences) {

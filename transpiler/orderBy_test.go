@@ -10,14 +10,14 @@ func TestOrderBy(t *testing.T) {
 		orderBy  string
 		expected string
 	}{
-		{"int:", "int: ASC;", "SELECT Test.[int] FROM dbo.Test ORDER BY int ASC"},
-		{"int:string:bool:", "bool: DESC", "SELECT Test.[int], Test.[string], Test.[bool] FROM dbo.Test ORDER BY bool DESC"},
-		{"int:;string:;int:", "int:", "SELECT Test.[string], Test.[int] FROM dbo.Test ORDER BY int ASC"},
-		{"int:;string:;int:", "int:ASC;string:DESC;", "SELECT Test.[string], Test.[int] FROM dbo.Test ORDER BY int ASC, string DESC"},
+		{"Int:", "Int: ASC;", "SELECT Types.[Int] FROM dbo.Types ORDER BY Int ASC"},
+		{"Int:Str:Bool:", "Bool: DESC", "SELECT Types.[Int], Types.[Str], Types.[Bool] FROM dbo.Types ORDER BY Bool DESC"},
+		{"Int:;Str:;Int:", "Int:", "SELECT Types.[Str], Types.[Int] FROM dbo.Types ORDER BY Int ASC"},
+		{"Int:;Str:;Int:", "Int:ASC;Str:DESC;", "SELECT Types.[Str], Types.[Int] FROM dbo.Types ORDER BY Int ASC, Str DESC"},
 	}
 
 	for _, tt := range tests {
-		ir, err := testNew(tt.query)
+		ir, err := testNewTypes(tt.query)
 		if err != nil {
 			t.Errorf("Query table error. [%s] %s\n", tt.query, err.Error())
 		}

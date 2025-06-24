@@ -9,13 +9,14 @@ func TestColumnFunctions(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"AS('NewName', @('string')):", "SELECT ( Test.[string] ) AS NewName FROM dbo.Test"},              // AS Function
-		{"string:EXCLUDE('bool'):!=False", "SELECT Test.[string] FROM dbo.Test WHERE (Test.[bool] != 0)"}, // EXCLUDE Function
+		{"AS('NewName', @('Str')):", "SELECT ( Types.[Str] ) AS NewName FROM dbo.Types"},                                                                                           // AS/Alias Function
+		{"Str:AS('NewName', @('Int')):>5", "Types.[Str], Types.[NewName] FROM ( SELECT Types.[Str], ( Types.[Int] ) AS NewName FROM dbo.Types ) AS Types WHERE (Types.[Int] > 5)"}, // Alias Condition
+		{"Str:EXCLUDE('Bool'):!=False", "SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Bool] != 0)"},                                                                             // EXCLUDE Function
 	}
 
 	for _, tt := range tests {
 		// Defined in transpiler_test.go
-		ir, err := testNew(tt.input)
+		ir, err := testNewTypes(tt.input)
 		if err != nil {
 			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
 		}

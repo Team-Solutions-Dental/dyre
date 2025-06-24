@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectRef"
 	"github.com/vamuscari/dyre/object/objectType"
 )
 
@@ -18,19 +19,104 @@ type Query struct {
 	JoinStatements       []*JoinStatement
 	GroupByStatements    []string
 	HavingStatements     []string
-	Depth                int
 	OrderBy              []*OrderByStatement
+	RefLevel             int
 }
 
 func (q *Query) ConstructQuery() string {
+	switch q.RefLevel {
+	case objectRef.LITERAL:
+		return q.tableQuery()
+	case objectRef.FIELD:
+		return q.tableQuery()
+	case objectRef.EXPRESSION:
+		return q.aliasQuery()
+	case objectRef.GROUP:
+		return q.groupQuery()
+	default:
+		return q.tableQuery()
+	}
+}
 
+func (q *Query) tableQuery() string {
 	var query string = "SELECT "
 
 	if q.Limit != nil && *q.Limit > 0 {
 		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
 	}
 
-	query = query + q.selectConstructor()
+	query = query + selectConstructor(q.SelectStatements)
+
+	query = query + " FROM " + q.From
+
+	if len(q.JoinStatements) > 0 {
+		query = query + joinConstructor(q.JoinStatements)
+	}
+
+	if len(q.WhereStatements) > 0 {
+		query = query + whereConstructor(q.WhereStatements)
+	}
+
+	if len(q.OrderBy) > 0 {
+		query = query + orderByConstructor(q.OrderBy)
+	}
+
+	return query
+}
+
+func (q *Query) aliasQuery() string {
+	var query string = "SELECT "
+
+	if q.Limit != nil && *q.Limit > 0 {
+		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
+	}
+
+	var selectList []string
+	for _, v := range q.SelectNameList() {
+		selectList = append(selectList, fmt.Sprintf("%s.[%s]", q.TableName, v))
+	}
+
+	query = strings.Join(selectList, ", ")
+
+	query = query + fmt.Sprintf(" FROM ( %s ) AS %s", q.aliasTableQuery(), q.TableName)
+
+	if len(q.AliasWhereStatements) > 0 {
+		query = query + whereConstructor(q.AliasWhereStatements)
+	}
+
+	if len(q.OrderBy) > 0 {
+		query = query + orderByConstructor(q.OrderBy)
+	}
+
+	return query
+}
+
+func (q *Query) aliasTableQuery() string {
+	var query string = "SELECT "
+
+	query = query + selectConstructor(q.SelectStatements)
+
+	query = query + " FROM " + q.From
+
+	if len(q.JoinStatements) > 0 {
+		query = query + joinConstructor(q.JoinStatements)
+	}
+
+	if len(q.WhereStatements) > 0 {
+		query = query + whereConstructor(q.WhereStatements)
+	}
+
+	return query
+}
+
+func (q *Query) groupQuery() string {
+	var query string = "SELECT "
+
+	if q.Limit != nil && *q.Limit > 0 {
+		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
+	}
+
+	query = query + selectConstructor(q.SelectStatements)
 
 	query = query + " FROM " + q.From
 
@@ -44,17 +130,20 @@ func (q *Query) ConstructQuery() string {
 
 	if len(q.GroupByStatements) > 0 {
 		query = query + groupByConstructor(q.GroupByStatements)
-		if len(q.HavingStatements) > 0 {
-			query = query + havingConstructor(q.HavingStatements)
-		}
 	}
 
-	if q.Depth == 0 && len(q.OrderBy) > 0 {
+	if len(q.HavingStatements) > 0 {
+		query = query + havingConstructor(q.HavingStatements)
+	}
+
+	if len(q.OrderBy) > 0 {
 		query = query + orderByConstructor(q.OrderBy)
 	}
 
 	return query
 }
+
+// SELECT * FROM () WHER
 
 func (q *Query) SelectNameList() []string {
 	var fields []string
@@ -75,9 +164,9 @@ func (q *Query) SelectStatementLocation(input string) int {
 	return -1
 }
 
-func (q *Query) selectConstructor() string {
+func selectConstructor(stmts []SelectStatement) string {
 	var selectStrings []string
-	for _, ss := range q.SelectStatements {
+	for _, ss := range stmts {
 		selectStrings = append(selectStrings, ss.Statement())
 	}
 
@@ -161,7 +250,6 @@ func (js *JoinStatement) joinIrOn() string {
 }
 
 // TODO: Append select statements from joins
-
 func joinConstructor(joins []*JoinStatement) string {
 	var joinArr []string
 	for _, j := range joins {
