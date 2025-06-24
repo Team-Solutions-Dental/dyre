@@ -133,12 +133,13 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 		Name:       "X",
 		TableName:  "X",
 		SchemaName: "dbo",
-		FieldNames: []string{"x", "a"},
+		FieldNames: []string{"x", "a", "d"},
 		Fields:     map[string]endpoint.Field{},
 	}
 
 	x.Fields["x"] = endpoint.Field{Endpoint: x, Name: "x", FieldType: objectType.STRING, Nullable: true}
 	x.Fields["a"] = endpoint.Field{Endpoint: x, Name: "a", FieldType: objectType.INTEGER, Nullable: true}
+	x.Fields["d"] = endpoint.Field{Endpoint: x, Name: "d", FieldType: objectType.DATETIME, Nullable: true}
 
 	xy := &endpoint.Endpoint{
 		Service:    service,
@@ -174,40 +175,3 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 
 	return New(input, service.Endpoints["X"])
 }
-
-// func TestEvalIntegerExpression(t *testing.T) {
-// 	integer := "5"
-// 	field := &endpoint.Field{
-// 		Name:         "int",
-// 		TypeName:     "integer",
-// 		SqlType:      "int",
-// 		DefaultField: false,
-// 		SqlSelect:    "int",
-// 	}
-//
-// 	exp := testEvalExpression(integer, field)
-// 	if exp != integer {
-// 		t.Errorf("Integer is incorrect. got=%s, want=%s", exp, integer)
-// 	}
-// }
-//
-// func testEvalExpression(input string, field *endpoint.Field) string {
-// 	l := lexer.New(input)
-// 	p := parser.New(l)
-// 	q := p.ParseQuery()
-// 	req := &request.Request{
-// 		Endpoint: &endpoint.Endpoint{
-// 			Name:        "Test",
-// 			RequestType: "GET",
-// 			FieldNames:  []string{"int", "string", "boolean"},
-// 			Fields: map[string]endpoint.Field{
-// 				"int": {Name: "int", TypeName: "integer", SqlType: "integer", DefaultField: false, SqlSelect: "int"},
-// 				// "string":  {"string", "string", "NVARCHAR(MAX)", false, "string"},
-// 				// "boolean": {"boolean", "boolean", "bit", false, "boolean"},
-// 			},
-// 			TableName: "dbo.test",
-// 		},
-// 	}
-//
-// 	return evalExpression(q, req, field)
-// }

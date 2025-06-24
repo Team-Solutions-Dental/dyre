@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/vamuscari/dyre/object"
+	"github.com/vamuscari/dyre/object/objectRef"
 	"github.com/vamuscari/dyre/object/objectType"
 )
 
-var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
-	"len": func(ir *IR, args ...object.Object) object.Object {
+var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object{
+	"len": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
@@ -24,7 +25,7 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 		}
 
 	},
-	"date": func(ir *IR, args ...object.Object) object.Object {
+	"date": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
@@ -39,7 +40,7 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
 		}
 	},
-	"datetime": func(ir *IR, args ...object.Object) object.Object {
+	"datetime": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
@@ -54,19 +55,21 @@ var builtins = map[string]func(ir *IR, args ...object.Object) object.Object{
 			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
 		}
 	},
-	"like": func(ir *IR, args ...object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("wrong number of arguments. got=%d, want=1", len(args))
+	//
+	"like": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
 		}
 
-		arg := args[0]
+		column := args[0]
+		comparison := args[1]
 
 		switch {
-		case arg.Type() == objectType.STRING:
+		case column.Type() == objectType.STRING:
 			return &object.Expression{ExpressionType: objectType.BOOLEAN,
-				Value: fmt.Sprintf("%s.[%s] LIKE %s", ir.endpoint.TableName, ir.currentSelectStatement.Name(), args[0])}
+				Value: fmt.Sprintf("(%s LIKE %s)", column.String(), comparison.String())}
 		default:
-			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
+			return newError("Invalid Type. %s %s", column.Type(), column.String())
 		}
 	},
 }

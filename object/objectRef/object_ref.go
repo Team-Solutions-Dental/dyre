@@ -1,5 +1,7 @@
 package objectRef
 
+import "maps"
+
 const (
 	_ int = iota
 	LITERAL
@@ -46,4 +48,8 @@ func (lr *LocalReferences) AllSame() bool {
 	}
 
 	return true
+}
+
+func (lr *LocalReferences) Append(subRef *LocalReferences) {
+	maps.Copy(lr.store, subRef.store)
 }

@@ -270,7 +270,8 @@ func evalColumnFunction(node *ast.ColumnFunction, ir *IR) object.Object {
 	if !ir.checkGroup(false) {
 		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
 	}
-	args := evalExpressions(node.Arguments, ir)
+	local := objectRef.NewLocalReferences()
+	args := evalExpressions(node.Arguments, ir, local)
 
 	_, ok := columnFunctions[node.Fn]
 	if !ok {
@@ -284,7 +285,9 @@ func evalGroupFunction(node *ast.GroupFunction, ir *IR) object.Object {
 	if !ir.checkGroup(true) {
 		return newError("Group '%s' cannot be called on Non-Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
 	}
-	args := evalExpressions(node.Arguments, ir)
+
+	local := objectRef.NewLocalReferences()
+	args := evalExpressions(node.Arguments, ir, local)
 
 	_, ok := groupFunctions[node.Fn]
 	if !ok {
@@ -527,13 +530,15 @@ func isError(obj object.Object) bool {
 func evalExpressions(
 	exps []ast.Expression,
 	ir *IR,
+	local *objectRef.LocalReferences,
 ) []object.Object {
 	var results []object.Object
 
 	for _, e := range exps {
-		local := objectRef.NewLocalReferences()
-		evaluated := eval(e, ir, local)
+		subRefs := objectRef.NewLocalReferences()
+		evaluated := eval(e, ir, subRefs)
 		results = append(results, evaluated)
+		local.Append(subRefs)
 	}
 
 	return results
@@ -545,12 +550,12 @@ func evalCallExpression(
 	ir *IR,
 	local *objectRef.LocalReferences,
 ) object.Object {
-	args := evalExpressions(exps, ir)
+	args := evalExpressions(exps, ir, local)
 
 	_, ok := builtins[function]
 	if !ok {
 		return newError("Function %s not found", function)
 	}
 
-	return builtins[function](ir, args...)
+	return builtins[function](ir, local, args...)
 }
