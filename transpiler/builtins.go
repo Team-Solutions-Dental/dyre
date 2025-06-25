@@ -25,6 +25,35 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		}
 
 	},
+	"datepart": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
+		}
+
+		return &object.Expression{ExpressionType: objectType.DATE,
+			Value: fmt.Sprintf("datepart(%s, %s)", args[0], args[1])}
+	},
+	"convert": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) < 2 {
+			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
+		}
+
+		if len(args) > 3 {
+			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
+		}
+
+		if len(args) == 2 {
+			return &object.Expression{ExpressionType: objectType.DATE,
+				Value: fmt.Sprintf("CONVERT(%s, %s)", args[0], args[1])}
+		}
+
+		if len(args) == 3 {
+			return &object.Expression{ExpressionType: objectType.DATE,
+				Value: fmt.Sprintf("CONVERT(%s, %s, %s)", args[0], args[1], args[2])}
+		}
+
+		return nil
+	},
 	"date": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
