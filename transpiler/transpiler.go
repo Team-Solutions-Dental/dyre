@@ -151,18 +151,20 @@ func (ir *IR) evalTable() object.Object {
 
 	// Add statements from joins into parent.
 	for _, j := range ir.joins {
-		for _, ss := range j.childIR.sql.SelectStatements {
-			// Ignore child joined on since parent should be referenced instead
-			if ss.Name() == j.childOn {
-				continue
+		if ir.sql.RefLevel < objectRef.GROUP {
+			for _, ss := range j.childIR.sql.SelectStatements {
+				// Ignore child joined on since parent should be referenced instead
+				if ss.Name() == j.childOn {
+					continue
+				}
+				fieldName := ss.Name()
+				joinedSelect := sql.SelectField{
+					FieldName: &fieldName,
+					TableName: &j.alias,
+					ObjType:   ss.ObjectType(),
+				}
+				ir.sql.SelectStatements = append(ir.sql.SelectStatements, &joinedSelect)
 			}
-			fieldName := ss.Name()
-			joinedSelect := sql.SelectField{
-				FieldName: &fieldName,
-				TableName: &j.alias,
-				ObjType:   ss.ObjectType(),
-			}
-			ir.sql.SelectStatements = append(ir.sql.SelectStatements, &joinedSelect)
 		}
 
 		err := j.Check()
@@ -522,14 +524,19 @@ func evalColumnCall(
 
 	str := eval.(*object.String)
 
-	field, ok := ir.endpoint.Fields[str.Value]
-	if !ok {
-		return newError("Invalid Column Call Expression, type not string. got=%s", eval.Type())
+	if field, ok := ir.endpoint.Fields[str.Value]; ok {
+		local.Set(field.Name, objectRef.FIELD)
+		return &object.Expression{ExpressionType: field.FieldType,
+			Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, str.Value)}
 	}
 
-	local.Set(field.Name, objectRef.FIELD)
-	return &object.Expression{ExpressionType: field.FieldType,
-		Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, str.Value)}
+	if joined, ok := ir.sql.GetJoinedStatement(str.Value); ok {
+		local.Set(joined.Statement(), objectRef.FIELD)
+		return &object.Expression{ExpressionType: joined.ObjectType(),
+			Value: joined.Statement()}
+	}
+
+	return newError("Column Call %s not found", eval.String())
 
 }
 

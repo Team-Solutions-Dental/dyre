@@ -57,3 +57,36 @@ func TestGroupError(t *testing.T) {
 		}
 	}
 }
+
+func TestGroupJoins(t *testing.T) {
+	tests := []struct {
+		input_x  string
+		input_xy string
+		expected string
+	}{
+		{"GROUP('b'):", "b:", "SELECT XYN.[b] FROM dbo.X INNER JOIN ( SELECT XY.[b], XY.[a] FROM dbo.XY ) AS XYN ON X.[a] = XYN.[a] GROUP BY XYN.[b]"},
+		{"GROUP('b'):SUM('z',@('y')):", "b:y:", "SELECT XYN.[b], SUM( XYN.[y] ) AS z FROM dbo.X INNER JOIN ( SELECT XY.[b], XY.[y], XY.[a] FROM dbo.XY ) AS XYN ON X.[a] = XYN.[a] GROUP BY XYN.[b]"},
+	}
+
+	for _, tt := range tests {
+		// Defined in transpiler_test.go
+		x, err := testNewXYZ(tt.input_x)
+		if err != nil {
+			t.Fatalf("testNewXYZ. %s\n", err.Error())
+		}
+
+		_, err = x.INNERJOIN("XYN").ON("a", "a").Query(tt.input_xy)
+		if err != nil {
+			t.Fatalf("INNERJOIN XY. %s\n", err.Error())
+		}
+
+		sql_statement, err := x.EvaluateQuery()
+		if err != nil {
+			t.Errorf("x.EvaluateQuery() %s\n", err.Error())
+		}
+
+		if sql_statement != tt.expected {
+			t.Errorf("Group failed. [%s] [%s]\n%s \n%s\n ", tt.input_x, tt.input_xy, sql_statement, tt.expected)
+		}
+	}
+}

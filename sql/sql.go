@@ -31,6 +31,9 @@ func (q *Query) ConstructQuery() string {
 	case objectRef.FIELD:
 		return q.tableQuery()
 	case objectRef.EXPRESSION:
+		if len(q.AliasWhereStatements) == 0 {
+			return q.tableQuery()
+		}
 		return q.aliasQuery()
 	case objectRef.GROUP:
 		return q.groupQuery()
@@ -163,6 +166,47 @@ func (q *Query) SelectStatementLocation(input string) int {
 		}
 	}
 	return -1
+}
+
+func (q *Query) JoinedStatements() []SelectStatement {
+	var output []SelectStatement
+	for _, js := range q.JoinStatements {
+		for _, ss := range js.Child_Query.SelectStatements {
+			// Ignore child joined on since parent should be referenced instead
+			if ss.Name() == *js.Child_On {
+				continue
+			}
+			fieldName := ss.Name()
+			joinedSelect := SelectField{
+				FieldName: &fieldName,
+				TableName: js.Alias,
+				ObjType:   ss.ObjectType(),
+			}
+			output = append(output, &joinedSelect)
+		}
+	}
+	return output
+}
+
+func (q *Query) GetJoinedStatement(input string) (*SelectField, bool) {
+	for _, js := range q.JoinStatements {
+		for _, ss := range js.Child_Query.SelectStatements {
+			// Ignore child joined on since parent should be referenced instead
+			if ss.Name() == *js.Child_On {
+				continue
+			}
+			if input == ss.Name() {
+				fieldName := ss.Name()
+				joinedSelect := SelectField{
+					FieldName: &fieldName,
+					TableName: js.Alias,
+					ObjType:   ss.ObjectType(),
+				}
+				return &joinedSelect, true
+			}
+		}
+	}
+	return nil, false
 }
 
 func selectConstructor(stmts []SelectStatement) string {

@@ -16,27 +16,43 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
 
-		name := args[0]
+		name_obj := args[0]
 
-		if name.Type() != objectType.STRING {
-			return newError("Invalid name identity type, got=%s, want=STRING", name.Type())
+		if name_obj.Type() != objectType.STRING {
+			return newError("Invalid name identity type, got=%s, want=STRING", name_obj.Type())
 		}
 
-		string_obj, ok := name.(*object.String)
+		name, ok := name_obj.(*object.String)
 		if !ok {
-			return newError("Invalid name identity type convertion, got=%s, want=STRING", name.Type())
+			return newError("Invalid name identity type convertion, got=%s, want=STRING", name_obj.Type())
 		}
 
-		selectStatementLoc := ir.sql.SelectStatementLocation(string_obj.Value)
+		selectStatementLoc := ir.sql.SelectStatementLocation(name.Value)
 		if selectStatementLoc >= 0 {
-			return newError("Cannot group already defined field '%s'", string_obj.Value)
+			return newError("Cannot group already defined field '%s'", name.Value)
 		}
 
-		groupSelect := &sql.SelectGroupField{FieldName: &string_obj.Value, TableName: &ir.endpoint.TableName}
-		local.Set(groupSelect.Statement(), objectRef.GROUP)
+		//groupSelect := &sql.SelectGroupField{FieldName: &name.Value, TableName: &ir.endpoint.TableName}
+		groupSelect := &sql.SelectGroupField{}
+
+		field, field_ok := ir.endpoint.Fields[name.Value]
+		joined, joined_ok := ir.sql.GetJoinedStatement(name.Value)
+		if field_ok {
+			local.Set(field.Name, objectRef.GROUP)
+			groupSelect.FieldName = &name.Value
+			groupSelect.TableName = &ir.endpoint.Name
+			groupSelect.ObjType = field.Type()
+		} else if joined_ok {
+			local.Set(joined.Statement(), objectRef.GROUP)
+			groupSelect.FieldName = joined.FieldName
+			groupSelect.TableName = joined.TableName
+			groupSelect.ObjType = joined.ObjType
+		} else {
+			return newError("Column '%s' not found", name.Value)
+		}
+
 		ir.currentSelectStatement = groupSelect
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
-
 		ir.sql.GroupByStatements = append(ir.sql.GroupByStatements, groupSelect.Statement())
 
 		return nil

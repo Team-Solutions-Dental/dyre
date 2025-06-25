@@ -92,7 +92,7 @@ func TestDoubleJoins(t *testing.T) {
 		"x:",
 		"x:y:",
 		"y:z:",
-		"SELECT X.[x], XY.[y], XY.[z] FROM dbo.X INNER JOIN ( SELECT XY.[x], XY.[y], YZ.[z] FROM dbo.XY INNER JOIN ( SELECT YZ.[y], YZ.[z] FROM dbo.YZ ) AS YZ ON XY.[y] = YZ.[y] ) AS XY ON X.[x] = XY.[x]",
+		"SELECT X.[x], XYN.[y], XYN.[z] FROM dbo.X INNER JOIN ( SELECT XY.[x], XY.[y], YZN.[z] FROM dbo.XY INNER JOIN ( SELECT YZ.[y], YZ.[z] FROM dbo.YZ ) AS YZN ON XY.[y] = YZN.[y] ) AS XYN ON X.[x] = XYN.[x]",
 	}
 
 	x, err := testNewXYZ(test.input_x)
@@ -100,12 +100,12 @@ func TestDoubleJoins(t *testing.T) {
 		t.Fatalf("testNewXYZ. %s\n", err.Error())
 	}
 
-	xy, err := x.INNERJOIN("XY").ON("x", "x").Query(test.input_xy)
+	xy, err := x.INNERJOIN("XYN").ON("x", "x").Query(test.input_xy)
 	if err != nil {
 		t.Fatalf("INNERJOIN XY. %s\n", err.Error())
 	}
 
-	_, err = xy.INNERJOIN("YZ").ON("y", "y").Query(test.input_yz)
+	_, err = xy.INNERJOIN("YZN").ON("y", "y").Query(test.input_yz)
 	if err != nil {
 		t.Fatalf("INNERJOIN YZ. %s\n", err.Error())
 	}

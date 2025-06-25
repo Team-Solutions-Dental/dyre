@@ -194,11 +194,11 @@ func testNewTypes(input string) (*PrimaryIR, error) {
 
 func testNewXYZ(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
-	service.EndpointNames = []string{"X", "XY", "YZ"}
+	service.EndpointNames = []string{"XN", "XYN", "YZN"}
 
 	x := &endpoint.Endpoint{
 		Service:    service,
-		Name:       "X",
+		Name:       "XN",
 		TableName:  "X",
 		SchemaName: "dbo",
 		FieldNames: []string{"x", "a", "d"},
@@ -211,7 +211,7 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 
 	xy := &endpoint.Endpoint{
 		Service:    service,
-		Name:       "XY",
+		Name:       "XYN",
 		TableName:  "XY",
 		SchemaName: "dbo",
 		FieldNames: []string{"x", "y", "a", "b"},
@@ -225,7 +225,7 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 
 	yz := &endpoint.Endpoint{
 		Service:    service,
-		Name:       "YZ",
+		Name:       "YZN",
 		TableName:  "YZ",
 		SchemaName: "dbo",
 		FieldNames: []string{"y", "z", "b", "c"},
@@ -237,9 +237,9 @@ func testNewXYZ(input string) (*PrimaryIR, error) {
 	yz.Fields["b"] = endpoint.Field{Endpoint: yz, Name: "b", FieldType: objectType.INTEGER, Nullable: true}
 	yz.Fields["c"] = endpoint.Field{Endpoint: yz, Name: "c", FieldType: objectType.INTEGER, Nullable: true}
 
-	service.Endpoints["X"] = x
-	service.Endpoints["XY"] = xy
-	service.Endpoints["YZ"] = yz
+	service.Endpoints["XN"] = x
+	service.Endpoints["XYN"] = xy
+	service.Endpoints["YZN"] = yz
 
-	return New(input, service.Endpoints["X"])
+	return New(input, service.Endpoints["XN"])
 }
