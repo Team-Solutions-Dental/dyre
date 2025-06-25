@@ -12,6 +12,7 @@ import (
 type Query struct {
 	SelectStatements     []SelectStatement
 	AliasWhereStatements []string
+	TableAlias           string
 	Limit                *int
 	From                 string
 	TableName            string
@@ -73,12 +74,12 @@ func (q *Query) aliasQuery() string {
 
 	var selectList []string
 	for _, v := range q.SelectNameList() {
-		selectList = append(selectList, fmt.Sprintf("%s.[%s]", q.TableName, v))
+		selectList = append(selectList, fmt.Sprintf("%s.[%s]", q.TableAlias, v))
 	}
 
-	query = strings.Join(selectList, ", ")
+	query = query + strings.Join(selectList, ", ")
 
-	query = query + fmt.Sprintf(" FROM ( %s ) AS %s", q.aliasTableQuery(), q.TableName)
+	query = query + fmt.Sprintf(" FROM ( %s ) AS %s", q.aliasTableQuery(), q.TableAlias)
 
 	if len(q.AliasWhereStatements) > 0 {
 		query = query + whereConstructor(q.AliasWhereStatements)

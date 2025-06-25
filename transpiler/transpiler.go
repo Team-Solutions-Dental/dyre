@@ -130,6 +130,7 @@ func (ir *IR) evalTable() object.Object {
 	}
 
 	ir.sql.TableName = ir.endpoint.TableName
+	ir.sql.TableAlias = ir.endpoint.Name
 
 	// Eval Joins Before Parent
 	for _, js := range ir.joins {
@@ -288,7 +289,11 @@ func evalColumnFunction(node *ast.ColumnFunction, ir *IR, local *objectRef.Local
 	return columnFunctions[node.Fn](ir, args...)
 }
 
-func evalGroupFunction(node *ast.GroupFunction, ir *IR, local *objectRef.LocalReferences) object.Object {
+func evalGroupFunction(
+	node *ast.GroupFunction,
+	ir *IR,
+	local *objectRef.LocalReferences,
+) object.Object {
 	if !ir.checkGroup(true) {
 		return newError("Group Function '%s' cannot be called on Non-Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
 	}
@@ -492,8 +497,8 @@ func evalColumnCall(
 				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
 		case "EXPRESSION":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.EXPRESSION)
-			se := ir.currentSelectStatement.(*sql.SelectExpression)
-			return se.Expression
+			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
+				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.Name, ir.currentSelectStatement.Name())}
 		case "GROUP_FIELD":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.GROUP)
 			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
