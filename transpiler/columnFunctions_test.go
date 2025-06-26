@@ -10,9 +10,9 @@ func TestColumnFunctions(t *testing.T) {
 		expected string
 	}{
 		{"AS('NewName', @('Str')):",
-			"SELECT ( Types.[Str] ) AS [NewName] FROM dbo.Types"}, // AS/Alias Function
+			"SELECT (Types.[Str]) AS [NewName] FROM dbo.Types"}, // AS/Alias Function
 		{"Str:AS('NewName', @('Int')):>5",
-			"SELECT Types.[Str], Types.[NewName] FROM ( SELECT Types.[Str], ( Types.[Int] ) AS [NewName] FROM dbo.Types ) AS Types WHERE (Types.[NewName] > 5)"}, // Alias Condition
+			"SELECT Types.[Str], Types.[NewName] FROM ( SELECT Types.[Str], (Types.[Int]) AS [NewName] FROM dbo.Types ) AS Types WHERE (Types.[NewName] > 5)"}, // Alias Condition
 		{"Str:EXCLUDE('Bool'):!=False",
 			"SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Bool] != 0)"}, // EXCLUDE Function
 	}
@@ -41,8 +41,8 @@ func TestColumnFunctionJoins(t *testing.T) {
 		input_yz string
 		expected string
 	}{
-		{"x:", "AS('x', @('z')):", "SELECT X.[x] FROM dbo.X INNER JOIN ( SELECT ( YZ.[z] ) AS [x] FROM dbo.YZ ) AS YZN ON X.[x] = YZN.[x]"},
-		{"x:", "AS('x', @('z')): != NULL", "SELECT X.[x] FROM dbo.X INNER JOIN ( SELECT YZN.[x] FROM ( SELECT ( YZ.[z] ) AS [x] FROM dbo.YZ ) AS YZN WHERE (YZN.[x] IS NOT NULL) ) AS YZN ON X.[x] = YZN.[x]"},
+		{"x:", "AS('x', @('z')):", "SELECT X.[x] FROM dbo.X INNER JOIN ( SELECT (YZ.[z]) AS [x] FROM dbo.YZ ) AS YZN ON X.[x] = YZN.[x]"},
+		{"x:", "AS('x', @('z')): != NULL", "SELECT X.[x] FROM dbo.X INNER JOIN ( SELECT YZN.[x] FROM ( SELECT (YZ.[z]) AS [x] FROM dbo.YZ ) AS YZN WHERE (YZN.[x] IS NOT NULL) ) AS YZN ON X.[x] = YZN.[x]"},
 	}
 
 	for _, tt := range tests {
