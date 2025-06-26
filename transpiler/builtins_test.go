@@ -9,13 +9,20 @@ func TestBuiltinFunctions(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"x: len(@) > 5;", "SELECT X.[x] FROM dbo.X WHERE (LEN(X.[x]) > 5)"},                                         // Len function
-		{"x: like(@,'%hello%');", "SELECT X.[x] FROM dbo.X WHERE (X.[x] LIKE '%hello%')"},                            // Like function
-		{"d: > datetime('2025/04/03');", "SELECT X.[d] FROM dbo.X WHERE (X.[d] > CONVERT(date, '2025/04/03', 127))"}, // Datetime function
+		{"StrN: len(@) > 5;",
+			"SELECT Types.[StrN] FROM dbo.Types WHERE (LEN(Types.[StrN]) > 5)"}, // Len function
+		{"StrN: like(@,'%hello%');",
+			"SELECT Types.[StrN] FROM dbo.Types WHERE (Types.[StrN] LIKE '%hello%')"}, // Like function
+		{"DateTimeN: > datetime('2025/04/03');",
+			"SELECT Types.[DateTimeN] FROM dbo.Types WHERE (Types.[DateTimeN] > CONVERT(date, '2025/04/03', 127))"}, // Datetime function
+		{"AS('year', datepart('year', @('DateTimeN'))):",
+			"SELECT ( DATEPART(year, Types.[DateTimeN]) ) AS year FROM dbo.Types"}, // datepart function
+		{"AS('year', convert('year', @('DateTimeN'))):",
+			"SELECT ( CONVERT(year, Types.[DateTimeN]) ) AS year FROM dbo.Types"}, // convert function
 	}
 
 	for _, tt := range tests {
-		ir, err := testNewXYZ(tt.input)
+		ir, err := testNewTypes(tt.input)
 		if err != nil {
 			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
 		}
