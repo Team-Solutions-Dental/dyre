@@ -281,6 +281,12 @@ func evalColumnFunction(node *ast.ColumnFunction, ir *IR, local *objectRef.Local
 	subRef := objectRef.NewLocalReferences()
 	args := evalExpressions(node.Arguments, ir, local)
 
+	for _, obj := range args {
+		if isError(obj) {
+			return obj
+		}
+	}
+
 	_, ok := columnFunctions[node.Fn]
 	if !ok {
 		return newError("Column Function '%s' not found", node.Fn)
@@ -302,6 +308,12 @@ func evalGroupFunction(
 
 	subRef := objectRef.NewLocalReferences()
 	args := evalExpressions(node.Arguments, ir, subRef)
+
+	for _, obj := range args {
+		if isError(obj) {
+			return obj
+		}
+	}
 
 	_, ok := groupFunctions[node.Fn]
 	if !ok {

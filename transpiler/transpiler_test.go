@@ -128,28 +128,28 @@ func TestNullExpressions(t *testing.T) {
 	}
 }
 
-// func TestKeywords(t *testing.T) {
-// 	tests := []struct {
-// 		input    string
-// 		expected string
-// 	}{
-// 		{"AS('GROUP', @('group') ):Str:", "SELECT ( 1000 ) AS GROUP, Types.[Str] FROM dbo.Types"}, // GROUP Keyword
-// 	}
-//
-// 	for _, tt := range tests {
-// 		// Defined in transpiler_test.go
-// 		ir, _ := testNewTypes(tt.input)
-// 		sql_statement, err := ir.EvaluateQuery()
-//
-// 		if err != nil {
-// 			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
-// 		}
-//
-// 		if sql_statement != tt.expected {
-// 			t.Errorf("Query failed. [%s]\n%s \n%s\n ", tt.input, sql_statement, tt.expected)
-// 		}
-// 	}
-// }
+func TestKeywords(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"AS('GROUP', @('Group') ):Str:", "SELECT ( Types.[Group] ) AS GROUP, Types.[Str] FROM dbo.Types"}, // GROUP Keyword
+	}
+
+	for _, tt := range tests {
+		// Defined in transpiler_test.go
+		ir, _ := testNewTypes(tt.input)
+		sql_statement, err := ir.EvaluateQuery()
+
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
+
+		if sql_statement != tt.expected {
+			t.Errorf("Query failed. [%s]\n%s \n%s\n ", tt.input, sql_statement, tt.expected)
+		}
+	}
+}
 
 func testNewTypes(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
