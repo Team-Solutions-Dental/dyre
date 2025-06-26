@@ -9,14 +9,15 @@ func TestGroupFunctions(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"GROUP('Str'):", "SELECT Types.[Str] FROM dbo.Types GROUP BY Types.[Str]"},                                                                         // GROUP Function
-		{"GROUP('Str'):@('Int')>5;", "SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Int] > 5) GROUP BY Types.[Str]"},                                      // WHERE Evaluation
-		{"GROUP('Str'):COUNT('countedBool', @('Bool')):", "SELECT Types.[Str], COUNT( Types.[Bool] ) AS [countedBool] FROM dbo.Types GROUP BY Types.[Str]"}, // COUNT Function
-		{"GROUP('Str'):SUM('sumInt', @('Int')):", "SELECT Types.[Str], SUM( Types.[Int] ) AS [sumInt] FROM dbo.Types GROUP BY Types.[Str]"},                 // SUM Function
-		{"GROUP('Str'):AVG('avgInt', @('Int')):", "SELECT Types.[Str], AVG( Types.[Int] ) AS [avgInt] FROM dbo.Types GROUP BY Types.[Str]"},                 // AVG Function
-		{"GROUP('Str'):MIN('minInt', @('Int')):", "SELECT Types.[Str], MIN( Types.[Int] ) AS [minInt] FROM dbo.Types GROUP BY Types.[Str]"},                 // MIN Function
-		{"GROUP('Str'):MAX('maxInt', @('Int')):", "SELECT Types.[Str], MAX( Types.[Int] ) AS [maxInt] FROM dbo.Types GROUP BY Types.[Str]"},                 // MAX Function
-		{"GROUP('Str'): != NULL;", "SELECT Types.[Str] FROM dbo.Types GROUP BY Types.[Str] HAVING (Types.[Str] IS NOT NULL)"},                               // Select Field HAVING
+		{"GROUP('Str'):", "SELECT Types.[Str] FROM dbo.Types GROUP BY Types.[Str]"},                                                                                          // GROUP Function
+		{"GROUP('year', datepart('year', @('DateTimeN'))):", "SELECT DATEPART(year, Types.[DateTimeN]) AS [year] FROM dbo.Types GROUP BY DATEPART(year, Types.[DateTimeN])"}, // GROUP Function
+		{"GROUP('Str'):@('Int')>5;", "SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Int] > 5) GROUP BY Types.[Str]"},                                                       // WHERE Evaluation
+		{"GROUP('Str'):COUNT('countedBool', @('Bool')):", "SELECT Types.[Str], COUNT( Types.[Bool] ) AS [countedBool] FROM dbo.Types GROUP BY Types.[Str]"},                  // COUNT Function
+		{"GROUP('Str'):SUM('sumInt', @('Int')):", "SELECT Types.[Str], SUM( Types.[Int] ) AS [sumInt] FROM dbo.Types GROUP BY Types.[Str]"},                                  // SUM Function
+		{"GROUP('Str'):AVG('avgInt', @('Int')):", "SELECT Types.[Str], AVG( Types.[Int] ) AS [avgInt] FROM dbo.Types GROUP BY Types.[Str]"},                                  // AVG Function
+		{"GROUP('Str'):MIN('minInt', @('Int')):", "SELECT Types.[Str], MIN( Types.[Int] ) AS [minInt] FROM dbo.Types GROUP BY Types.[Str]"},                                  // MIN Function
+		{"GROUP('Str'):MAX('maxInt', @('Int')):", "SELECT Types.[Str], MAX( Types.[Int] ) AS [maxInt] FROM dbo.Types GROUP BY Types.[Str]"},                                  // MAX Function
+		{"GROUP('Str'): != NULL;", "SELECT Types.[Str] FROM dbo.Types GROUP BY Types.[Str] HAVING (Types.[Str] IS NOT NULL)"},                                                // Select Field HAVING
 	}
 
 	for _, tt := range tests {

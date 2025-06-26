@@ -13,52 +13,16 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 	// GROUP(ColumnName:string)
 	// GROUP(Alias:string, Expression)
 	"GROUP": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("wrong number of arguments. got=%d, want=1", len(args))
+		if len(args) == 1 {
+			return groupColumn(ir, local, args...)
 		}
 
-		name_obj := args[0]
-
-		if name_obj.Type() != objectType.STRING {
-			return newError("Invalid name identity type, got=%s, want=STRING", name_obj.Type())
+		if len(args) == 2 {
+			return groupExpression(ir, local, args...)
 		}
 
-		name, ok := name_obj.(*object.String)
-		if !ok {
-			return newError("Invalid name identity type convertion, got=%s, want=STRING", name_obj.Type())
-		}
+		return newError("wrong number of arguments. got=%d, want=1-2", len(args))
 
-		selectStatementLoc := ir.sql.SelectStatementLocation(name.Value)
-		if selectStatementLoc >= 0 {
-			return newError("Cannot group already defined field '%s'", name.Value)
-		}
-
-		//groupSelect := &sql.SelectGroupField{FieldName: &name.Value, TableName: &ir.endpoint.TableName}
-		groupSelect := &sql.SelectGroupField{Query: ir.sql}
-
-		field, field_ok := ir.endpoint.Fields[name.Value]
-		joined, joined_ok := ir.sql.GetJoinedStatement(name.Value)
-		if field_ok {
-			local.Set(field.Name, objectRef.GROUP)
-			groupSelect.Query = ir.sql
-			groupSelect.FieldName = &name.Value
-			groupSelect.TableName = &ir.endpoint.Name
-			groupSelect.ObjType = field.Type()
-		} else if joined_ok {
-			local.Set(joined.Statement(), objectRef.GROUP)
-			groupSelect.Query = ir.sql
-			groupSelect.FieldName = joined.FieldName
-			groupSelect.TableName = joined.TableName
-			groupSelect.ObjType = joined.ObjType
-		} else {
-			return newError("Column '%s' not found", name.Value)
-		}
-
-		ir.currentSelectStatement = groupSelect
-		ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
-		ir.sql.GroupByStatements = append(ir.sql.GroupByStatements, groupSelect.Statement())
-
-		return nil
 	},
 	// COUNT(name, expression)
 	"COUNT": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
@@ -263,4 +227,59 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
+}
+
+func groupColumn(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+
+	name, oerr := object.CastType[*object.String](args[0])
+	if oerr != nil {
+		return oerr
+	}
+
+	selectStatementLoc := ir.sql.SelectStatementLocation(name.Value)
+	if selectStatementLoc >= 0 {
+		return newError("Cannot group already defined field '%s'", name.Value)
+	}
+
+	//groupSelect := &sql.SelectGroupField{FieldName: &name.Value, TableName: &ir.endpoint.TableName}
+	groupSelect := &sql.SelectGroupField{Query: ir.sql}
+
+	field, field_ok := ir.endpoint.Fields[name.Value]
+	joined, joined_ok := ir.sql.GetJoinedStatement(name.Value)
+	if field_ok {
+		local.Set(field.Name, objectRef.GROUP)
+		groupSelect.Query = ir.sql
+		groupSelect.FieldName = &name.Value
+		groupSelect.TableName = &ir.endpoint.Name
+		groupSelect.ObjType = field.Type()
+	} else if joined_ok {
+		local.Set(joined.Statement(), objectRef.GROUP)
+		groupSelect.Query = ir.sql
+		groupSelect.FieldName = joined.FieldName
+		groupSelect.TableName = joined.TableName
+		groupSelect.ObjType = joined.ObjType
+	} else {
+		return newError("Column '%s' not found", name.Value)
+	}
+
+	ir.currentSelectStatement = groupSelect
+	ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
+	ir.sql.GroupByStatements = append(ir.sql.GroupByStatements, groupSelect.Statement())
+
+	return nil
+}
+
+func groupExpression(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+	alias, oerr := object.CastType[*object.String](args[0])
+	if oerr != nil {
+		return oerr
+	}
+
+	fn := ""
+	groupSelect := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &alias.Value, Expression: args[1]}
+	local.Set(args[1].String(), objectRef.GROUP)
+	ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
+	ir.sql.GroupByStatements = append(ir.sql.GroupByStatements, args[1].String())
+
+	return nil
 }
