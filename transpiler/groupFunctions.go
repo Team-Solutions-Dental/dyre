@@ -1,8 +1,6 @@
 package transpiler
 
 import (
-	"fmt"
-
 	"github.com/vamuscari/dyre/object"
 	"github.com/vamuscari/dyre/object/objectRef"
 	"github.com/vamuscari/dyre/object/objectType"
@@ -54,7 +52,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          fmt.Sprintf("COUNT( %s )", expression.String()),
+			Value:          expression.String(),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -96,7 +94,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          fmt.Sprintf("SUM( %s )", expression.String()),
+			Value:          expression.String(),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -136,7 +134,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          fmt.Sprintf("AVG( %s )", expression.String()),
+			Value:          expression.String(),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -176,7 +174,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          fmt.Sprintf("MIN( %s )", expression.String()),
+			Value:          expression.String(),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -216,7 +214,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          fmt.Sprintf("MAX( %s )", expression.String()),
+			Value:          expression.String(),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -278,6 +276,7 @@ func groupExpression(ir *IR, local *objectRef.LocalReferences, args ...object.Ob
 	fn := ""
 	groupSelect := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &alias.Value, Expression: args[1]}
 	local.Set(args[1].String(), objectRef.GROUP)
+	ir.currentSelectStatement = groupSelect
 	ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)
 	ir.sql.GroupByStatements = append(ir.sql.GroupByStatements, args[1].String())
 
