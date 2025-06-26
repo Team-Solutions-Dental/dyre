@@ -46,7 +46,7 @@ func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
 	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint,
 		ast:   q,
 		error: err,
-		sql:   &sql.Query{}}}
+		sql:   &sql.Query{BracketedColumns: endpoint.Service.Settings.BracketedColumns}}}
 	return &ir, err
 }
 
@@ -59,7 +59,7 @@ func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
 	var ir SubIR = SubIR{IR: IR{endpoint: endpoint,
 		ast:   q,
 		error: err,
-		sql:   &sql.Query{}}}
+		sql:   &sql.Query{BracketedColumns: endpoint.Service.Settings.BracketedColumns}}}
 	return &ir, err
 }
 
@@ -159,6 +159,7 @@ func (ir *IR) evalTable() object.Object {
 				}
 				fieldName := ss.Name()
 				joinedSelect := sql.SelectField{
+					Query:     ir.sql,
 					FieldName: &fieldName,
 					TableName: &j.alias,
 					ObjType:   ss.ObjectType(),
@@ -262,6 +263,7 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalRe
 
 	} else {
 		selects := &sql.SelectField{
+			Query:     ir.sql,
 			FieldName: &column.Name,
 			TableName: &ir.endpoint.TableName,
 			ObjType:   column.FieldType,
@@ -552,7 +554,7 @@ func evalColumnCall(
 
 }
 
-func newError(format string, a ...interface{}) *object.Error {
+func newError(format string, a ...any) *object.Error {
 	return &object.Error{Message: fmt.Sprintf(format, a...)}
 }
 

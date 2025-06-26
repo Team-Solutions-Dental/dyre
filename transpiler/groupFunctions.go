@@ -10,7 +10,8 @@ import (
 )
 
 var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object{
-	// GROUP(name)
+	// GROUP(ColumnName:string)
+	// GROUP(Alias:string, Expression)
 	"GROUP": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
@@ -33,17 +34,19 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 		}
 
 		//groupSelect := &sql.SelectGroupField{FieldName: &name.Value, TableName: &ir.endpoint.TableName}
-		groupSelect := &sql.SelectGroupField{}
+		groupSelect := &sql.SelectGroupField{Query: ir.sql}
 
 		field, field_ok := ir.endpoint.Fields[name.Value]
 		joined, joined_ok := ir.sql.GetJoinedStatement(name.Value)
 		if field_ok {
 			local.Set(field.Name, objectRef.GROUP)
+			groupSelect.Query = ir.sql
 			groupSelect.FieldName = &name.Value
 			groupSelect.TableName = &ir.endpoint.Name
 			groupSelect.ObjType = field.Type()
 		} else if joined_ok {
 			local.Set(joined.Statement(), objectRef.GROUP)
+			groupSelect.Query = ir.sql
 			groupSelect.FieldName = joined.FieldName
 			groupSelect.TableName = joined.TableName
 			groupSelect.ObjType = joined.ObjType
@@ -90,7 +93,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			Value:          fmt.Sprintf("COUNT( %s )", expression.String()),
 		}
 
-		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
 
 		local.Set(expr.Statement(), objectRef.GROUP)
 
@@ -132,7 +135,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			Value:          fmt.Sprintf("SUM( %s )", expression.String()),
 		}
 
-		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
 		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
@@ -172,7 +175,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			Value:          fmt.Sprintf("AVG( %s )", expression.String()),
 		}
 
-		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
 		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
@@ -212,7 +215,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			Value:          fmt.Sprintf("MIN( %s )", expression.String()),
 		}
 
-		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
 		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr
@@ -252,7 +255,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 			Value:          fmt.Sprintf("MAX( %s )", expression.String()),
 		}
 
-		expr := &sql.SelectGroupExpression{Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
 		local.Set(expr.Statement(), objectRef.GROUP)
 
 		ir.currentSelectStatement = expr

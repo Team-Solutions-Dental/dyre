@@ -133,7 +133,7 @@ func TestKeywords(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"AS('GROUP', @('Group') ):Str:", "SELECT ( Types.[Group] ) AS GROUP, Types.[Str] FROM dbo.Types"}, // GROUP Keyword
+		{"AS('GROUP', @('Group') ):Str:", "SELECT ( Types.[Group] ) AS [GROUP], Types.[Str] FROM dbo.Types"}, // GROUP Keyword
 	}
 
 	for _, tt := range tests {
@@ -154,8 +154,10 @@ func TestKeywords(t *testing.T) {
 func testNewTypes(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
 	service.EndpointNames = []string{"Types"}
+	service.Settings.BracketedColumns = true
 
 	t := &endpoint.Endpoint{
+		Service:    service,
 		Name:       "Types",
 		TableName:  "Types",
 		SchemaName: "dbo",
@@ -195,6 +197,7 @@ func testNewTypes(input string) (*PrimaryIR, error) {
 func testNewXYZ(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
 	service.EndpointNames = []string{"XN", "XYN", "YZN"}
+	service.Settings.BracketedColumns = true
 
 	x := &endpoint.Endpoint{
 		Service:    service,

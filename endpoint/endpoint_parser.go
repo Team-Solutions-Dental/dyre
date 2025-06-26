@@ -21,6 +21,8 @@ func ParseJSON(b []byte) (*Service, error) {
 	var service Service
 	endpoints := make(map[string]*Endpoint)
 
+	service.Settings.BracketedColumns = true
+
 	var errs []error
 
 	for i, ep := range m {

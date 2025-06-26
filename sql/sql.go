@@ -22,6 +22,7 @@ type Query struct {
 	HavingStatements     []string
 	OrderBy              []*OrderByStatement
 	RefLevel             int
+	BracketedColumns     bool
 }
 
 func (q *Query) ConstructQuery() string {
@@ -147,8 +148,6 @@ func (q *Query) groupQuery() string {
 	return query
 }
 
-// SELECT * FROM () WHER
-
 func (q *Query) SelectNameList() []string {
 	var fields []string
 	for _, ss := range q.SelectStatements {
@@ -178,6 +177,7 @@ func (q *Query) JoinedStatements() []SelectStatement {
 			}
 			fieldName := ss.Name()
 			joinedSelect := SelectField{
+				Query:     q,
 				FieldName: &fieldName,
 				TableName: js.Alias,
 				ObjType:   ss.ObjectType(),
@@ -198,6 +198,7 @@ func (q *Query) GetJoinedStatement(input string) (*SelectField, bool) {
 			if input == ss.Name() {
 				fieldName := ss.Name()
 				joinedSelect := SelectField{
+					Query:     q,
 					FieldName: &fieldName,
 					TableName: js.Alias,
 					ObjType:   ss.ObjectType(),
@@ -227,6 +228,7 @@ type SelectStatement interface {
 }
 
 type SelectField struct {
+	Query     *Query
 	FieldName *string
 	TableName *string
 	ObjType   objectType.Type
@@ -236,10 +238,14 @@ func (sf *SelectField) Type() string                { return "FIELD" }
 func (sf *SelectField) ObjectType() objectType.Type { return sf.ObjType }
 func (sf *SelectField) Name() string                { return *sf.FieldName }
 func (sf *SelectField) Statement() string {
-	return fmt.Sprintf("%s.[%s]", *sf.TableName, *sf.FieldName)
+	if sf.Query.BracketedColumns {
+		return fmt.Sprintf("%s.[%s]", *sf.TableName, *sf.FieldName)
+	}
+	return fmt.Sprintf("%s.%s", *sf.TableName, *sf.FieldName)
 }
 
 type SelectExpression struct {
+	Query      *Query
 	Expression object.Object
 	Alias      *string
 }
@@ -248,10 +254,14 @@ func (se *SelectExpression) Type() string                { return "EXPRESSION" }
 func (se *SelectExpression) ObjectType() objectType.Type { return se.Expression.Type() }
 func (se *SelectExpression) Name() string                { return *se.Alias }
 func (se *SelectExpression) Statement() string {
+	if se.Query.BracketedColumns {
+		return fmt.Sprintf("( %s ) AS [%s]", se.Expression.String(), *se.Alias)
+	}
 	return fmt.Sprintf("( %s ) AS %s", se.Expression.String(), *se.Alias)
 }
 
 type SelectGroupField struct {
+	Query     *Query
 	FieldName *string
 	TableName *string
 	ObjType   objectType.Type
@@ -261,10 +271,14 @@ func (sgf *SelectGroupField) Type() string                { return "GROUP_FIELD"
 func (sgf *SelectGroupField) ObjectType() objectType.Type { return sgf.ObjType }
 func (sgf *SelectGroupField) Name() string                { return *sgf.FieldName }
 func (sgf *SelectGroupField) Statement() string {
-	return fmt.Sprintf("%s.[%s]", *sgf.TableName, *sgf.FieldName)
+	if sgf.Query.BracketedColumns {
+		return fmt.Sprintf("%s.[%s]", *sgf.TableName, *sgf.FieldName)
+	}
+	return fmt.Sprintf("%s.%s", *sgf.TableName, *sgf.FieldName)
 }
 
 type SelectGroupExpression struct {
+	Query      *Query
 	Expression object.Object
 	Fn         *string
 	Alias      *string
@@ -274,6 +288,9 @@ func (sge *SelectGroupExpression) Type() string                { return "GROUP_E
 func (sge *SelectGroupExpression) ObjectType() objectType.Type { return sge.Expression.Type() }
 func (sge *SelectGroupExpression) Name() string                { return *sge.Alias }
 func (sge *SelectGroupExpression) Statement() string {
+	if sge.Query.BracketedColumns {
+		return fmt.Sprintf("%s AS [%s]", sge.Expression.String(), *sge.Alias)
+	}
 	return fmt.Sprintf("%s AS %s", sge.Expression.String(), *sge.Alias)
 }
 
@@ -287,11 +304,17 @@ type JoinStatement struct {
 }
 
 func (js *JoinStatement) parentIrOn() string {
-	return fmt.Sprintf("%s.[%s]", js.Parent_Query.TableName, *js.Parent_On)
+	if js.Parent_Query.BracketedColumns {
+		return fmt.Sprintf("%s.[%s]", js.Parent_Query.TableName, *js.Parent_On)
+	}
+	return fmt.Sprintf("%s.%s", js.Parent_Query.TableName, *js.Parent_On)
 }
 
 func (js *JoinStatement) joinIrOn() string {
-	return fmt.Sprintf("%s.[%s]", *js.Alias, *js.Child_On)
+	if js.Child_Query.BracketedColumns {
+		return fmt.Sprintf("%s.[%s]", *js.Alias, *js.Child_On)
+	}
+	return fmt.Sprintf("%s.%s", *js.Alias, *js.Child_On)
 }
 
 // TODO: Append select statements from joins

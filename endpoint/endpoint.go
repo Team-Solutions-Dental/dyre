@@ -21,6 +21,7 @@ type Service struct {
 	Node
 	Endpoints     map[string]*Endpoint
 	EndpointNames []string
+	Settings      Settings
 }
 
 func (s *Service) JSON() string {
@@ -182,7 +183,7 @@ func (f *Field) TS() string {
 	return out.String()
 }
 
-func (f *Field) SelectStatement() sql.SelectStatement {
+func (f *Field) SelectStatement() *sql.SelectField {
 	return &sql.SelectField{
 		FieldName: &f.Name,
 		TableName: &f.Endpoint.TableName,
@@ -246,4 +247,8 @@ func objTypeToTsType(obj objectType.Type) string {
 	default:
 		return "string"
 	}
+}
+
+type Settings struct {
+	BracketedColumns bool
 }

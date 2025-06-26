@@ -51,6 +51,7 @@ func TestSingleJoins(t *testing.T) {
 
 func testNewParent(input string) (*PrimaryIR, error) {
 	var service *endpoint.Service = &endpoint.Service{Endpoints: map[string]*endpoint.Endpoint{}}
+	service.Settings.BracketedColumns = true
 
 	parent := &endpoint.Endpoint{
 		Service:    service,

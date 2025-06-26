@@ -103,11 +103,11 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 		Alias:        &js.name,
 	}
 
-	if js.parentIR.sql.SelectStatements == nil {
-
-	} else {
-		js.parentIR.sql.JoinStatements = append(js.parentIR.sql.JoinStatements, joinStmnt)
-	}
+	// if js.parentIR.sql.SelectStatements == nil {
+	//
+	// } else {
+	// 	js.parentIR.sql.JoinStatements = append(js.parentIR.sql.JoinStatements, joinStmnt)
+	// }
 
 	if js.parentIR.sql.JoinStatements == nil {
 		js.parentIR.sql.JoinStatements = []*sql.JoinStatement{joinStmnt}
@@ -124,6 +124,7 @@ func (js *joinIR) Check() error {
 	if childLoc < 0 {
 		childField := js.childIR.endpoint.Fields[js.childOn]
 		ss := childField.SelectStatement()
+		ss.Query = js.childIR.sql
 		js.childIR.sql.SelectStatements = append(js.childIR.sql.SelectStatements, ss)
 	}
 
