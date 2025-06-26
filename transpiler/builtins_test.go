@@ -15,10 +15,14 @@ func TestBuiltinFunctions(t *testing.T) {
 			"SELECT Types.[StrN] FROM dbo.Types WHERE (Types.[StrN] LIKE '%hello%')"}, // Like function
 		{"DateTimeN: > datetime('2025/04/03');",
 			"SELECT Types.[DateTimeN] FROM dbo.Types WHERE (Types.[DateTimeN] > CONVERT(date, '2025/04/03', 127))"}, // Datetime function
+		{"AS('deci', cast(@('Int') , 'float' )):",
+			"SELECT ( CAST( Types.[Int] AS float ) ) AS deci FROM dbo.Types"}, // cast function
 		{"AS('year', datepart('year', @('DateTimeN'))):",
 			"SELECT ( DATEPART(year, Types.[DateTimeN]) ) AS year FROM dbo.Types"}, // datepart function
 		{"AS('year', convert('year', @('DateTimeN'))):",
 			"SELECT ( CONVERT(year, Types.[DateTimeN]) ) AS year FROM dbo.Types"}, // convert function
+		{"AS('utc', timezone(@('DateTimeN'), 'UTC')):",
+			"SELECT ( Types.[DateTimeN] AT TIME ZONE 'UTC' ) AS utc FROM dbo.Types"}, // timezone function
 	}
 
 	for _, tt := range tests {

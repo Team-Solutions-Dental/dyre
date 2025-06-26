@@ -25,6 +25,42 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		}
 
 	},
+	//cast(expression, to)
+	"cast": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
+		}
+
+		expression := args[0]
+
+		if args[1].Type() != objectType.STRING {
+			return newError("Invalid cast to identity type, got=%s, want=STRING", args[1].Type())
+		}
+
+		castTo, ok := args[1].(*object.String)
+		if !ok {
+			return newError("Invalid cast to identity type, got=%s, want=STRING", args[1].Type())
+		}
+
+		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+			Value: fmt.Sprintf("CAST( %s AS %s )", expression, castTo.Value)}
+
+	},
+	"timezone": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
+		}
+
+		expression := args[0]
+
+		zone, ok := args[1].(*object.String)
+		if !ok {
+			return newError("Invalid Argument Type. %s %s", args[1].Type(), args[1].String())
+		}
+
+		return &object.Expression{ExpressionType: objectType.DATE,
+			Value: fmt.Sprintf("%s AT TIME ZONE %s", expression, zone.String())}
+	},
 	"datepart": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -38,6 +74,24 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		return &object.Expression{ExpressionType: objectType.DATE,
 			Value: fmt.Sprintf("DATEPART(%s, %s)", datepart.Value, args[1])}
 	},
+	"dateadd": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 3 {
+			return newError("wrong number of arguments. got=%d, want=3", len(args))
+		}
+
+		interval, ok := args[0].(*object.String)
+		if !ok {
+			return newError("Invalid Argument Type (Expect String). %s %s", args[0].Type(), args[0].String())
+		}
+
+		num, ok := args[1].(*object.Integer)
+		if !ok {
+			return newError("Invalid Argument Type (Expect Int). %s %s", args[1].Type(), args[1].String())
+		}
+
+		return &object.Expression{ExpressionType: objectType.DATE,
+			Value: fmt.Sprintf("DATEADD(%s, %s, %s)", interval.Value, num.String(), args[2])}
+	},
 	"convert": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) < 2 {
 			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
@@ -49,7 +103,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 
 		convert, ok := args[0].(*object.String)
 		if !ok {
-			return newError("Invalid Argument Type. %s %s", convert.Type(), convert.String())
+			return newError("Invalid Argument Type. %s %s", args[0].Type(), args[0].String())
 		}
 
 		if len(args) == 2 {
