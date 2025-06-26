@@ -350,7 +350,7 @@ func evalExpressionStatement(
 		return nil
 	}
 
-	if !local.AllSame() {
+	if !subRef.AllSame() {
 		return newError("Not all references are the same type")
 	}
 
@@ -462,6 +462,22 @@ func evalInfixExpression(
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
 			Value:          fmt.Sprintf("(%s OR %s)", left.String(), right.String())}
+	case operator == "*":
+		return &object.Expression{
+			ExpressionType: objectType.INTEGER,
+			Value:          fmt.Sprintf("(%s * %s)", left.String(), right.String())}
+	case operator == "/":
+		return &object.Expression{
+			ExpressionType: objectType.INTEGER,
+			Value:          fmt.Sprintf("(%s / %s)", left.String(), right.String())}
+	case operator == "+":
+		return &object.Expression{
+			ExpressionType: objectType.INTEGER,
+			Value:          fmt.Sprintf("(%s + %s)", left.String(), right.String())}
+	case operator == "-":
+		return &object.Expression{
+			ExpressionType: objectType.INTEGER,
+			Value:          fmt.Sprintf("(%s - %s)", left.String(), right.String())}
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}

@@ -102,6 +102,33 @@ func TestComparisonExpressions(t *testing.T) {
 	}
 }
 
+func TestArithmeticExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"AS('plus', @('Int') + 5 ):", "SELECT ((Types.[Int] + 5)) AS [plus] FROM dbo.Types"},     // +
+		{"AS('minus', @('Int') - 5 ):", "SELECT ((Types.[Int] - 5)) AS [minus] FROM dbo.Types"},   // -
+		{"AS('times', @('Int') * 5 ):", "SELECT ((Types.[Int] * 5)) AS [times] FROM dbo.Types"},   // *
+		{"AS('divide', @('Int') / 5 ):", "SELECT ((Types.[Int] / 5)) AS [divide] FROM dbo.Types"}, // /
+	}
+
+	for _, tt := range tests {
+		ir, err := testNewTypes(tt.input)
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
+		sql_statement, err := ir.EvaluateQuery()
+
+		if err != nil {
+			t.Errorf("Query test error. [%s] %s\n", tt.input, err.Error())
+		}
+
+		if sql_statement != tt.expected {
+			t.Errorf("Query failed. [%s]\n%s \n%s\n ", tt.input, sql_statement, tt.expected)
+		}
+	}
+}
 func TestNullExpressions(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -133,7 +160,7 @@ func TestKeywords(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"AS('GROUP', @('Group') ):Str:", "SELECT ( Types.[Group] ) AS [GROUP], Types.[Str] FROM dbo.Types"}, // GROUP Keyword
+		{"AS('GROUP', @('Group') ):Str:", "SELECT (Types.[Group]) AS [GROUP], Types.[Str] FROM dbo.Types"}, // GROUP Keyword
 	}
 
 	for _, tt := range tests {
