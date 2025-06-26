@@ -255,9 +255,9 @@ func (se *SelectExpression) ObjectType() objectType.Type { return se.Expression.
 func (se *SelectExpression) Name() string                { return *se.Alias }
 func (se *SelectExpression) Statement() string {
 	if se.Query.BracketedColumns {
-		return fmt.Sprintf("( %s ) AS [%s]", se.Expression.String(), *se.Alias)
+		return fmt.Sprintf("(%s) AS [%s]", se.Expression.String(), *se.Alias)
 	}
-	return fmt.Sprintf("( %s ) AS %s", se.Expression.String(), *se.Alias)
+	return fmt.Sprintf("(%s) AS %s", se.Expression.String(), *se.Alias)
 }
 
 type SelectGroupField struct {
@@ -289,9 +289,9 @@ func (sge *SelectGroupExpression) ObjectType() objectType.Type { return sge.Expr
 func (sge *SelectGroupExpression) Name() string                { return *sge.Alias }
 func (sge *SelectGroupExpression) Statement() string {
 	if sge.Query.BracketedColumns {
-		return fmt.Sprintf("%s AS [%s]", sge.Expression.String(), *sge.Alias)
+		return fmt.Sprintf("%s(%s) AS [%s]", *sge.Fn, sge.Expression.String(), *sge.Alias)
 	}
-	return fmt.Sprintf("%s AS %s", sge.Expression.String(), *sge.Alias)
+	return fmt.Sprintf("%s(%s) AS %s", *sge.Fn, sge.Expression.String(), *sge.Alias)
 }
 
 type JoinStatement struct {
