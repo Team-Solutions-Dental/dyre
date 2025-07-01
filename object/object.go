@@ -9,14 +9,17 @@ import (
 type Object interface {
 	Type() objectType.Type
 	String() string
+	Nullable() bool
 }
 
 type Expression struct {
 	ExpressionType objectType.Type
 	Value          string
+	Null           bool
 }
 
 func (e *Expression) Type() objectType.Type { return e.ExpressionType }
+func (e *Expression) Nullable() bool        { return e.Null }
 func (e *Expression) String() string        { return e.Value }
 
 type Integer struct {
@@ -24,6 +27,7 @@ type Integer struct {
 }
 
 func (i *Integer) Type() objectType.Type { return objectType.INTEGER }
+func (i *Integer) Nullable() bool        { return false }
 func (i *Integer) String() string        { return fmt.Sprintf("%d", i.Value) }
 
 type Float struct {
@@ -31,6 +35,7 @@ type Float struct {
 }
 
 func (f *Float) Type() objectType.Type { return objectType.FLOAT }
+func (f *Float) Nullable() bool        { return false }
 func (f *Float) String() string        { return fmt.Sprintf("%f", f.Value) }
 
 type Boolean struct {
@@ -38,6 +43,7 @@ type Boolean struct {
 }
 
 func (b *Boolean) Type() objectType.Type { return objectType.BOOLEAN }
+func (b *Boolean) Nullable() bool        { return false }
 func (b *Boolean) String() string {
 	if b.Value == true {
 		return "1"
@@ -48,6 +54,7 @@ func (b *Boolean) String() string {
 type Null struct{}
 
 func (n *Null) Type() objectType.Type { return objectType.NULL }
+func (n *Null) Nullable() bool        { return false }
 func (n *Null) String() string        { return "NULL" }
 
 type Error struct {
@@ -55,6 +62,7 @@ type Error struct {
 }
 
 func (e *Error) Type() objectType.Type { return objectType.ERROR }
+func (e *Error) Nullable() bool        { return false }
 func (e *Error) String() string        { return "ERROR: " + e.Message }
 
 type String struct {
@@ -62,6 +70,7 @@ type String struct {
 }
 
 func (s *String) Type() objectType.Type { return objectType.STRING }
+func (s *String) Nullable() bool        { return false }
 func (s *String) String() string        { return fmt.Sprintf("'%s'", s.Value) }
 
 type BuiltinFunction func(args ...Object) Object
@@ -71,6 +80,7 @@ type Builtin struct {
 }
 
 func (b *Builtin) Type() objectType.Type { return objectType.BUILTIN }
+func (b *Builtin) Nullable() bool        { return false }
 func (b *Builtin) String() string        { return "Builtin function " }
 
 func CastType[T Object](obj Object) (T, *Error) {
