@@ -95,24 +95,78 @@ CustomersNumber: @ > 200;
 CustomersNumber: 200 < @;
 ```
 
+In any expression a column can be provided by using the `@()` function
+In the example 
+`
+@('CustomerNumber') > 200;
+`
+would provide the same where condition on the SQL statement but exclude it from the result. Note, that columns are not required for an expression to be provided.
+Also, If a SQL statement has multiple column conditions then independent SQL calls will be needed. 
+
+```bash
+@('CustomerNumber') > 200 OR @('Balance') > 0;
+```
 Expressions can include builtin function calls for specific handling of fields. 
-For example `exclude(@)` will exclude a field from the top level of the query omitting it from the returned statement.
+For example `datepart('year',@)` will return the year of a date. 
 ```bash
-Active: exclude(@)
+CreateDate: datepart('year',@) > 2024
 ```
 
-Expressions and can be given in a row for the use of multiple expressions including function calls.
+Expressions and can be given in a row for the use of multiple expressions including function calls.  
 ```bash
-
-Name: exclude(@); != NULL;
+Name: len(@) > 3; != NULL;
 ```
+
+### Column Functions
+
+Columns can be represented as functions by using a `:` at the end similar to how column names are called.
+The most common column call is `AS():`. This represents the alias call AS that is often used in select statements.
+
+```bash
+AS('allTrue', true)):
+```
+
+
+Expression functions can be used inside to provide a modified output.
+In the example below `datepart()` is being called similar to how it's used in SQL to modify the output of the expression statement
+
+```bash
+AS('year', datepart('year', @('CreateDate'))): > 2024
+```
+
+Warning: `AS(): expression;` will wrap alias select statement to make a where statement possible. Avoid this kind of expression when possible.
+
 
 ### Putting it all together
 
 Multiple fields and expression can be called. Expressions index of the most recent field called for inference.
 ```bash
-CustomerID:CreateDate: > date('2025/04/03');Active: exclude(@); == FASLE;
+CustomerID:CreateDate: > date('2025/04/03');Active: != NULL; == FASLE;
 ```
+
+
+### Group By  
+
+Grouped table results are similar to how column functions are called. In the example below grouping on the Active column returns the column as expected. 
+
+```bash
+GROUP('Active'):
+```
+Grouping using an expression is possible when GROUP is provided with two arguments. The expression will be replicated in SQL to the Having statement to provided conditional outputs. 
+
+```bash
+GROUP('year', datepart('year', @('createDate'))): > 2024;
+```
+Standard grouping functions such as SUM, MIN, MAX, etc.. 
+
+```bash
+GROUP('ID'):SUM('SumBalance', @('Balance')):
+```
+
+Warn: Grouping Functions cannot be mixed with regular column functions or expressions. 
+
+
+
 
 ## Setting up middleware
 
@@ -233,6 +287,8 @@ func getCustomersWithBiling(c *ex.Context) {
 Order by shares a similar syntax to query expressions where column names are declared followed by some expression.  
 Only accessible through the top level query.
 
+Order by allows the call of any defined column / alias or a top level table column
+
 ```bash
  CreateDate: DESC; CustomerID: ASC;
 ```
@@ -258,4 +314,4 @@ func getCustomersWithBiling(c *ex.Context) {
     ...
 }
 ```
-### Group By  
+
