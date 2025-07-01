@@ -64,7 +64,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
-	// SUM(name, expression)
+	// SUM(name: string, input:expression )
 	"SUM": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "SUM"
 		if len(args) != 2 {
@@ -105,6 +105,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
+	//AVG( name:string, input: expression )
 	"AVG": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "AVG"
 		if len(args) != 2 {
