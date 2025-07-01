@@ -253,12 +253,14 @@ func groupColumn(ir *IR, local *objectRef.LocalReferences, args ...object.Object
 		groupSelect.FieldName = &name.Value
 		groupSelect.TableName = &ir.endpoint.Name
 		groupSelect.ObjType = field.Type()
+		groupSelect.HasNull = field.Nullable
 	} else if joined_ok {
 		local.Set(joined.Statement(), objectRef.GROUP)
 		groupSelect.Query = ir.sql
 		groupSelect.FieldName = joined.FieldName
 		groupSelect.TableName = joined.TableName
 		groupSelect.ObjType = joined.ObjType
+		groupSelect.HasNull = joined.Nullable()
 	} else {
 		return newError("Column '%s' not found", name.Value)
 	}
@@ -277,7 +279,13 @@ func groupExpression(ir *IR, local *objectRef.LocalReferences, args ...object.Ob
 	}
 
 	fn := ""
-	groupSelect := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &alias.Value, Expression: args[1]}
+	groupSelect := &sql.SelectGroupExpression{
+		Query:      ir.sql,
+		Fn:         &fn,
+		Alias:      &alias.Value,
+		Expression: args[1],
+		HasNull:    args[1].Nullable(),
+	}
 	local.Set(args[1].String(), objectRef.GROUP)
 	ir.currentSelectStatement = groupSelect
 	ir.sql.SelectStatements = append(ir.sql.SelectStatements, groupSelect)

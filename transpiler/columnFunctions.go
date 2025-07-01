@@ -30,7 +30,12 @@ var columnFunctions = map[string]func(ir *IR, args ...object.Object) object.Obje
 			return newError("Field '%s' name already defined ", name_obj.Value)
 		}
 
-		expr := &sql.SelectExpression{Query: ir.sql, Alias: &name_obj.Value, Expression: expression}
+		expr := &sql.SelectExpression{
+			Query:      ir.sql,
+			Alias:      &name_obj.Value,
+			Expression: expression,
+			HasNull:    expression.Nullable(),
+		}
 
 		ir.currentSelectStatement = expr
 		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
@@ -60,7 +65,11 @@ var columnFunctions = map[string]func(ir *IR, args ...object.Object) object.Obje
 			return newError("Cannot exclude already defined field '%s'", string_obj.Value)
 		}
 
-		ir.currentSelectStatement = &sql.SelectField{Query: ir.sql, FieldName: &string_obj.Value, TableName: &ir.endpoint.TableName}
+		ir.currentSelectStatement = &sql.SelectField{
+			Query:     ir.sql,
+			FieldName: &string_obj.Value,
+			TableName: &ir.endpoint.TableName,
+		}
 		return nil
 	},
 }

@@ -77,6 +77,8 @@ func (ir *IR) checkGroup(expected bool) bool {
 	return false
 }
 
+// Parse incoming request
+// Return AST
 func parse(req string) (*ast.RequestStatements, error) {
 	l := lexer.New(req)
 	p := parser.New(l)
@@ -94,6 +96,8 @@ func parse(req string) (*ast.RequestStatements, error) {
 	return q, nil
 }
 
+// Returns SQL Query for requested statement.
+// Run after all query inputs have been made.
 func (pir *PrimaryIR) EvaluateQuery() (string, error) {
 	if pir.error != nil {
 		return "", pir.error
@@ -177,6 +181,8 @@ func (ir *IR) evalTable() object.Object {
 	return nil
 }
 
+// Evaluation loop Function
+// Eval statements and expressions based on AST
 func eval(node ast.Node, ir *IR, local *objectRef.LocalReferences) object.Object {
 	switch node := node.(type) {
 	case *ast.RequestStatements:
@@ -224,6 +230,8 @@ func eval(node ast.Node, ir *IR, local *objectRef.LocalReferences) object.Object
 	}
 }
 
+// Eval Query statmenent.
+// Evals various statments within the query
 func evalQueryStatements(node *ast.RequestStatements, ir *IR, local *objectRef.LocalReferences) object.Object {
 	var result object.Object
 
@@ -237,6 +245,8 @@ func evalQueryStatements(node *ast.RequestStatements, ir *IR, local *objectRef.L
 	return result
 }
 
+// Eval Column Literal
+// Ex. ColumnName:
 func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalReferences) object.Object {
 	if !ir.checkGroup(false) {
 		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.TokenLiteral(), ir.endpoint.TableName)
@@ -266,6 +276,7 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalRe
 			Query:     ir.sql,
 			FieldName: &column.Name,
 			TableName: &ir.endpoint.TableName,
+			HasNull:   column.Nullable,
 			ObjType:   column.FieldType,
 		}
 		ir.currentSelectStatement = selects
@@ -275,6 +286,8 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalRe
 	return nil
 }
 
+// Eval Column Function
+// Ex. AS('alias',expr):
 func evalColumnFunction(node *ast.ColumnFunction, ir *IR, local *objectRef.LocalReferences) object.Object {
 	if !ir.checkGroup(false) {
 		return newError("Column '%s' cannot be called on Grouped Table '%s'", node.Fn, ir.endpoint.TableName)
@@ -398,6 +411,7 @@ func evalBangOperatorExpression(
 	case right.Type() == objectType.BOOLEAN:
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        right.Nullable(),
 			Value:          fmt.Sprintf("!%s", right.String())}
 	default:
 		return newError("Invalid Bang Operator Expression %s", right.String())
@@ -412,17 +426,24 @@ func evalMinusPrefixOperatorExpression(
 	case right.Type() == objectType.INTEGER:
 		return &object.Expression{
 			ExpressionType: objectType.INTEGER,
+			HasNull:        right.Nullable(),
 			Value:          fmt.Sprintf("-%s", right.String())}
 	default:
 		return newError("Invalid Minus Prefix Operator Expression %s", right.String())
 	}
 }
 
+// Eval Infix Expression
+// left operator right
 func evalInfixExpression(
 	operator string,
 	left, right object.Object,
 	local *objectRef.LocalReferences,
 ) object.Object {
+	nullable := false
+	if left.Nullable() || right.Nullable() {
+		nullable = true
+	}
 	switch {
 	case left.Type() == objectType.NULL:
 		return evalInfixNullExpression(operator, right, left, local)
@@ -433,50 +454,62 @@ func evalInfixExpression(
 	case operator == "==":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s = %s)", left.String(), right.String())}
 	case operator == "!=":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s != %s)", left.String(), right.String())}
 	case operator == ">":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s > %s)", left.String(), right.String())}
 	case operator == "<":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s < %s)", left.String(), right.String())}
 	case operator == ">=":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s >= %s)", left.String(), right.String())}
 	case operator == "<=":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s <= %s)", left.String(), right.String())}
 	case operator == "AND":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s AND %s)", left.String(), right.String())}
 	case operator == "OR":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s OR %s)", left.String(), right.String())}
 	case operator == "*":
 		return &object.Expression{
 			ExpressionType: objectType.INTEGER,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s * %s)", left.String(), right.String())}
 	case operator == "/":
 		return &object.Expression{
 			ExpressionType: objectType.INTEGER,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s / %s)", left.String(), right.String())}
 	case operator == "+":
 		return &object.Expression{
 			ExpressionType: objectType.INTEGER,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s + %s)", left.String(), right.String())}
 	case operator == "-":
 		return &object.Expression{
 			ExpressionType: objectType.INTEGER,
+			HasNull:        nullable,
 			Value:          fmt.Sprintf("(%s - %s)", left.String(), right.String())}
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
@@ -490,15 +523,19 @@ func evalInfixNullExpression(
 	local *objectRef.LocalReferences,
 ) object.Object {
 	switch {
+	case ref.Nullable() == false:
+		return newError("%s is not nullable", ref.String())
 	case ref.Type() == objectType.NULL:
 		return newError("NULL cannot be compared to NULL")
 	case operator == "==":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        true,
 			Value:          fmt.Sprintf("(%s IS %s)", ref.String(), null.String())}
 	case operator == "!=":
 		return &object.Expression{
 			ExpressionType: objectType.BOOLEAN,
+			HasNull:        false,
 			Value:          fmt.Sprintf("(%s IS NOT %s)", ref.String(), null.String())}
 	default:
 		return newError("unknown operator: %s %s %s", ref.Type(), operator, null.Type())
@@ -526,15 +563,18 @@ func evalColumnCall(
 		case "FIELD":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.FIELD)
 			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
-				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
+				HasNull: ir.currentSelectStatement.Nullable(),
+				Value:   fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
 		case "EXPRESSION":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.EXPRESSION)
 			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
-				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.Name, ir.currentSelectStatement.Name())}
+				HasNull: ir.currentSelectStatement.Nullable(),
+				Value:   fmt.Sprintf("%s.[%s]", ir.endpoint.Name, ir.currentSelectStatement.Name())}
 		case "GROUP_FIELD":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.GROUP)
 			return &object.Expression{ExpressionType: ir.currentSelectStatement.ObjectType(),
-				Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
+				HasNull: ir.currentSelectStatement.Nullable(),
+				Value:   fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, ir.currentSelectStatement.Name())}
 		case "GROUP_EXPRESSION":
 			local.Set(ir.currentSelectStatement.Name(), objectRef.GROUP)
 			ge := ir.currentSelectStatement.(*sql.SelectGroupExpression)
@@ -557,13 +597,15 @@ func evalColumnCall(
 	if field, ok := ir.endpoint.Fields[str.Value]; ok {
 		local.Set(field.Name, objectRef.FIELD)
 		return &object.Expression{ExpressionType: field.FieldType,
-			Value: fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, str.Value)}
+			HasNull: field.Nullable,
+			Value:   fmt.Sprintf("%s.[%s]", ir.endpoint.TableName, str.Value)}
 	}
 
 	if joined, ok := ir.sql.GetJoinedStatement(str.Value); ok {
 		local.Set(joined.Statement(), objectRef.FIELD)
 		return &object.Expression{ExpressionType: joined.ObjectType(),
-			Value: joined.Statement()}
+			HasNull: joined.Nullable(),
+			Value:   joined.Statement()}
 	}
 
 	return newError("Column Call %s not found", eval.String())

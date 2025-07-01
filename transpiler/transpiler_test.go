@@ -12,16 +12,16 @@ func TestEvalQueries(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"Int:", "SELECT Types.[Int] FROM dbo.Types"},                                                                                      // Basic Request
-		{"Int:Str:Bool:", "SELECT Types.[Int], Types.[Str], Types.[Bool] FROM dbo.Types"},                                                  // Chain Column
-		{"Int:;Str:;Int:", "SELECT Types.[Str], Types.[Int] FROM dbo.Types"},                                                               // Reorder
-		{"Str: @ == 'Hello'", "SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Str] = 'Hello')"},                                           // @ reference call
-		{"Bool: @ == FALSE", "SELECT Types.[Bool] FROM dbo.Types WHERE (Types.[Bool] = 0)"},                                                // Boolean Comparison
-		{"Int: Int: > 5", "SELECT Types.[Int] FROM dbo.Types WHERE (Types.[Int] > 5)"},                                                     // Integer Comparison
-		{"Int: > 5 OR < 10", "SELECT Types.[Int] FROM dbo.Types WHERE ((Types.[Int] > 5) OR (Types.[Int] < 10))"},                          // OR Statement
-		{"Date: @ == date('01/02/2023')", "SELECT Types.[Date] FROM dbo.Types WHERE (Types.[Date] = CONVERT(date, '01/02/2023', 23))"},     // Function Call
-		{"Int2:", "SELECT Types.[Int2] FROM dbo.Types"},                                                                                    // AlphaNumeric Column
-		{"@('Str') != NULL; Bool: == false;", "SELECT Types.[Bool] FROM dbo.Types WHERE (Types.[Str] IS NOT NULL) AND (Types.[Bool] = 0)"}, // @() reference function
+		{"Int:", "SELECT Types.[Int] FROM dbo.Types"},                                                                                        // Basic Request
+		{"Int:Str:Bool:", "SELECT Types.[Int], Types.[Str], Types.[Bool] FROM dbo.Types"},                                                    // Chain Column
+		{"Int:;Str:;Int:", "SELECT Types.[Str], Types.[Int] FROM dbo.Types"},                                                                 // Reorder
+		{"Str: @ == 'Hello'", "SELECT Types.[Str] FROM dbo.Types WHERE (Types.[Str] = 'Hello')"},                                             // @ reference call
+		{"Bool: @ == FALSE", "SELECT Types.[Bool] FROM dbo.Types WHERE (Types.[Bool] = 0)"},                                                  // Boolean Comparison
+		{"Int: Int: > 5", "SELECT Types.[Int] FROM dbo.Types WHERE (Types.[Int] > 5)"},                                                       // Integer Comparison
+		{"Int: > 5 OR < 10", "SELECT Types.[Int] FROM dbo.Types WHERE ((Types.[Int] > 5) OR (Types.[Int] < 10))"},                            // OR Statement
+		{"Date: @ == date('01/02/2023')", "SELECT Types.[Date] FROM dbo.Types WHERE (Types.[Date] = CONVERT(date, '01/02/2023', 23))"},       // Function Call
+		{"Int2:", "SELECT Types.[Int2] FROM dbo.Types"},                                                                                      // AlphaNumeric Column
+		{"@('StrN') != NULL; Bool: == false;", "SELECT Types.[Bool] FROM dbo.Types WHERE (Types.[StrN] IS NOT NULL) AND (Types.[Bool] = 0)"}, // @() reference function
 	}
 
 	for _, tt := range tests {

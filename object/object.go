@@ -15,11 +15,11 @@ type Object interface {
 type Expression struct {
 	ExpressionType objectType.Type
 	Value          string
-	Null           bool
+	HasNull        bool
 }
 
 func (e *Expression) Type() objectType.Type { return e.ExpressionType }
-func (e *Expression) Nullable() bool        { return e.Null }
+func (e *Expression) Nullable() bool        { return e.HasNull }
 func (e *Expression) String() string        { return e.Value }
 
 type Integer struct {

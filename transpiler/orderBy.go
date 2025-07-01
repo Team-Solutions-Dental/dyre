@@ -90,9 +90,9 @@ func evalOrderByExpressionStatement(stmnt *ast.ExpressionStatement, ir *IR) obje
 	}
 
 	return nil
-
 }
 
+// Check for order by bool
 func evalOrderByExpression(node *ast.OrderExpression, ir *IR) object.Object {
 	if len(ir.sql.OrderBy) < 1 {
 		return nil

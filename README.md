@@ -157,6 +157,7 @@ Grouping using an expression is possible when GROUP is provided with two argumen
 ```bash
 GROUP('year', datepart('year', @('createDate'))): > 2024;
 ```
+
 Standard grouping functions such as SUM, MIN, MAX, etc.. 
 
 ```bash

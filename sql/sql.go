@@ -225,6 +225,7 @@ type SelectStatement interface {
 	ObjectType() objectType.Type
 	Name() string
 	Statement() string
+	Nullable() bool
 }
 
 type SelectField struct {
@@ -232,11 +233,13 @@ type SelectField struct {
 	FieldName *string
 	TableName *string
 	ObjType   objectType.Type
+	HasNull   bool
 }
 
 func (sf *SelectField) Type() string                { return "FIELD" }
 func (sf *SelectField) ObjectType() objectType.Type { return sf.ObjType }
 func (sf *SelectField) Name() string                { return *sf.FieldName }
+func (sf *SelectField) Nullable() bool              { return sf.HasNull }
 func (sf *SelectField) Statement() string {
 	if sf.Query.BracketedColumns {
 		return fmt.Sprintf("%s.[%s]", *sf.TableName, *sf.FieldName)
@@ -248,11 +251,13 @@ type SelectExpression struct {
 	Query      *Query
 	Expression object.Object
 	Alias      *string
+	HasNull    bool
 }
 
 func (se *SelectExpression) Type() string                { return "EXPRESSION" }
 func (se *SelectExpression) ObjectType() objectType.Type { return se.Expression.Type() }
 func (se *SelectExpression) Name() string                { return *se.Alias }
+func (se *SelectExpression) Nullable() bool              { return se.HasNull }
 func (se *SelectExpression) Statement() string {
 	if se.Query.BracketedColumns {
 		return fmt.Sprintf("(%s) AS [%s]", se.Expression.String(), *se.Alias)
@@ -265,11 +270,13 @@ type SelectGroupField struct {
 	FieldName *string
 	TableName *string
 	ObjType   objectType.Type
+	HasNull   bool
 }
 
 func (sgf *SelectGroupField) Type() string                { return "GROUP_FIELD" }
 func (sgf *SelectGroupField) ObjectType() objectType.Type { return sgf.ObjType }
 func (sgf *SelectGroupField) Name() string                { return *sgf.FieldName }
+func (sgf *SelectGroupField) Nullable() bool              { return sgf.HasNull }
 func (sgf *SelectGroupField) Statement() string {
 	if sgf.Query.BracketedColumns {
 		return fmt.Sprintf("%s.[%s]", *sgf.TableName, *sgf.FieldName)
@@ -282,11 +289,13 @@ type SelectGroupExpression struct {
 	Expression object.Object
 	Fn         *string
 	Alias      *string
+	HasNull    bool
 }
 
 func (sge *SelectGroupExpression) Type() string                { return "GROUP_EXPRESSION" }
 func (sge *SelectGroupExpression) ObjectType() objectType.Type { return sge.Expression.Type() }
 func (sge *SelectGroupExpression) Name() string                { return *sge.Alias }
+func (sge *SelectGroupExpression) Nullable() bool              { return sge.HasNull }
 func (sge *SelectGroupExpression) Statement() string {
 	if sge.Query.BracketedColumns {
 		return fmt.Sprintf("%s(%s) AS [%s]", *sge.Fn, sge.Expression.String(), *sge.Alias)
