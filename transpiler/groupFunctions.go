@@ -22,7 +22,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 		return newError("wrong number of arguments. got=%d, want=1-2", len(args))
 
 	},
-	// COUNT(name, expression)
+	// COUNT(alias: string, input: expression)
 	"COUNT": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "COUNT"
 		if len(args) != 2 {
@@ -64,7 +64,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
-	// SUM(name: string, input:expression )
+	// SUM(name: string, input: expression)
 	"SUM": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "SUM"
 		if len(args) != 2 {
@@ -105,7 +105,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
-	//AVG( name:string, input: expression )
+	//AVG(name: string, input: expression)
 	"AVG": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "AVG"
 		if len(args) != 2 {
@@ -146,6 +146,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
+	// MIN(alias: string, input: expression)
 	"MIN": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "MIN"
 		if len(args) != 2 {
@@ -186,6 +187,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
+	// MAX(alias: string, input: expression)
 	"MAX": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		fn := "MAX"
 		if len(args) != 2 {
