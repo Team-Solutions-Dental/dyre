@@ -337,6 +337,16 @@ func joinConstructor(joins []*JoinStatement) string {
 	return strings.Join(joinArr, " ")
 }
 
+// ON
+// BETWEEN
+type JoinExpression interface {
+	Type() string
+	Statement() string
+}
+
+type JoinOn struct {
+}
+
 func whereConstructor(statements []string) string {
 	where := ""
 	if len(statements) < 1 {

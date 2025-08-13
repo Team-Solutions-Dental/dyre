@@ -1,6 +1,6 @@
 # \[Dy\]namic \[Re\]quests
 
-DyRe is a interpreted request builder for a middleware service. The intent of DyRe is to help automate selections of multiple fields without removing any functionality for handling specific queries. No two APIs are the same and it is impossible to know what changes are to come, so flexibility favored over ease of use. 
+DyRe is a interpreted request builder for a middleware service. The intent of DyRe is to help automate selections of multiple fields without removing any functionality for handling specific queries. DyRe is not a full query language and is not trying to be one. No two APIs are the same and it is impossible to know what changes are to come, so flexibility favored over ease of use.
 
 Example API request
 `curl http://localhost:8080/Customers?Query=CustomerID:Active:==True`  
@@ -166,7 +166,9 @@ GROUP('ID'):SUM('SumBalance', @('Balance')):
 
 Warn: Grouping Functions cannot be mixed with regular column functions or expressions. 
 
+### Operators Reference
 
+For a comprehensive list of all available operators and functions in DyRe, please refer to the [operators documentation](docs/operators.md).  
 
 
 ## Setting up middleware
@@ -315,4 +317,5 @@ func getCustomersWithBiling(c *ex.Context) {
     ...
 }
 ```
+
 
