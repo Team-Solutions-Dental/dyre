@@ -8,12 +8,12 @@ Example API request
 
 ## Setting up JSON config
 
-First you will need JSON file to build with.
+First, you will need a JSON file to build with.
 The name of the request is the thing being called.
 Fields are any independent SQL field on a table.
 Fields can be a string or an object with multiple params. 
-DyRe is type aware and will reject certain unmatching typed requests.
-If a type is not declared make sure to setup a default type that works for you. 
+DyRe is type-aware and will reject certain unmatching typed requests.
+If a type is not declared, make sure to set up a default type that works for you. 
 Defaults to nullable = true and type = string
 
 ```json
