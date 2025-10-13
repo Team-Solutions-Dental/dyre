@@ -15,11 +15,14 @@ func TestNextToken(t *testing.T) {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
-		{token.COLUMN, "Active"},
+		{token.IDENT, "Active"},
+		{token.COLON, ":"},
 		{token.COMMA, ","},
-		{token.COLUMN, "Name"},
+		{token.IDENT, "Name"},
+		{token.COLON, ":"},
 		{token.COMMA, ","},
-		{token.COLUMN, "Zip"},
+		{token.IDENT, "Zip"},
+		{token.COLON, ":"},
 		{token.IDENT, "contains"},
 		{token.LPAREN, "("},
 		{token.INT, "55555"},
