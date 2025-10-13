@@ -85,7 +85,7 @@ func (b *Builtin) String() string        { return "Builtin function " }
 
 func CastType[T Object](obj Object) (T, *Error) {
 	cast, ok := obj.(T)
-	if cast.Type() != obj.Type() || !ok {
+	if !ok || cast.Type() != obj.Type() {
 		return cast, &Error{Message: fmt.Sprintf("ERROR: Failed to cast %s", obj.Type())}
 	}
 	return cast, nil
