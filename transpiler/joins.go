@@ -145,7 +145,7 @@ func JoinPrefixEval(input string) (string, error) {
 	case "INNER":
 		return "INNER", nil
 	case "LEFT":
-		return "INNER", nil
+		return "LEFT", nil
 	case "RIGHT":
 		return "RIGHT", nil
 	case "FULL":

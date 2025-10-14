@@ -96,11 +96,18 @@ func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
 		}
 	}
 
+	if security, ok := m["security"]; ok {
+		request.Security, err = parseSecurityList(security)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("Security: %w", err))
+		}
+	}
+
 	if request.Fields == nil {
 		return nil, errors.New(fmt.Sprintf("No field <fields> on request  %s\n", request.Name))
 	}
 
-	expected_keys := []string{"name", "fields", "tableName", "schemaName", "joins"}
+	expected_keys := []string{"name", "fields", "tableName", "schemaName", "joins", "security"}
 	for i := range m {
 		if !utils.Array_Contains(expected_keys, i) {
 			errs = append(errs, fmt.Errorf("Unexpected key %s", i))
@@ -168,7 +175,12 @@ func parseField(f any, e *Endpoint) (Field, error) {
 		newField.Nullable, err = parseNullable(f, true)
 		errs = append(errs, err)
 
-		expected_keys := []string{"name", "type", "nullable"}
+		if security, ok := f["security"]; ok {
+			newField.Security, err = parseSecurityList(security)
+			errs = append(errs, err)
+		}
+
+		expected_keys := []string{"name", "type", "nullable", "security"}
 		for i := range f {
 			if !utils.Array_Contains(expected_keys, i) {
 				errs = append(errs,
@@ -219,6 +231,33 @@ func parseNullable(field_map map[string]any, def bool) (bool, error) {
 	}
 
 	return bool, nil
+}
+
+func parseSecurityList(value any) ([]string, error) {
+	switch v := value.(type) {
+	case string:
+		trimmed := strings.TrimSpace(v)
+		if trimmed == "" {
+			return nil, errors.New("'security' value cannot be empty")
+		}
+		return []string{trimmed}, nil
+	case []any:
+		var output []string
+		for i, item := range v {
+			str, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("'security[%d]' not string. got=%T", i, item)
+			}
+			trimmed := strings.TrimSpace(str)
+			if trimmed == "" {
+				return nil, fmt.Errorf("'security[%d]' cannot be empty", i)
+			}
+			output = append(output, trimmed)
+		}
+		return output, nil
+	default:
+		return nil, fmt.Errorf("'security' not string or array. got=%T", value)
+	}
 }
 
 func parseEndpointJoins(a []any, e *Endpoint) (map[string]Join, error) {

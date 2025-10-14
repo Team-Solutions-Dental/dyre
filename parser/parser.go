@@ -130,7 +130,7 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 // Expects ident, colon
-// Since the transpiler maintains an ref to the current column
+// Since the transpiler maintains a ref to the current column
 // they will no longer hold reference following expressions
 func (p *Parser) parseColumnLiteral() *ast.ColumnLiteral {
 	lit := &ast.ColumnLiteral{Token: p.curToken}

@@ -97,6 +97,7 @@ type Endpoint struct {
 	Name       string
 	TableName  string
 	SchemaName string
+	Security   []string
 	Joins      map[string]Join
 	JoinNames  []string
 	Fields     map[string]Field
@@ -121,6 +122,15 @@ func (e *Endpoint) JSON() string {
 	out.WriteString(fmt.Sprintf("\"name\" : \"%s\", ", e.Name))
 	out.WriteString(fmt.Sprintf("\"tableName\" : \"%s\", ", e.TableName))
 	out.WriteString(fmt.Sprintf("\"schemaName\" : \"%s\", ", e.SchemaName))
+	if len(e.Security) > 0 {
+		out.WriteString("\"security\" : [")
+		quoted := make([]string, 0, len(e.Security))
+		for _, s := range e.Security {
+			quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+		}
+		out.WriteString(strings.Join(quoted, ", "))
+		out.WriteString("], ")
+	}
 	out.WriteString("\"joins\" : [")
 	out.WriteString(strings.Join(joins, ", "))
 	out.WriteString("],")
@@ -152,6 +162,7 @@ type Field struct {
 	Name      string
 	FieldType objectType.Type
 	Nullable  bool
+	Security  []string
 }
 
 func (f *Field) Type() objectType.Type { return f.FieldType }
@@ -162,7 +173,17 @@ func (f *Field) JSON() string {
 
 	out.WriteString(fmt.Sprintf("\"name\" : \"%s\", ", f.Name))
 	out.WriteString(fmt.Sprintf("\"type\" : \"%s\", ", f.FieldType))
-	out.WriteString(fmt.Sprintf("\"nullable\" : %t ", f.Nullable))
+	out.WriteString(fmt.Sprintf("\"nullable\" : %t", f.Nullable))
+	if len(f.Security) > 0 {
+		out.WriteString(", ")
+		out.WriteString("\"security\" : [")
+		quoted := make([]string, 0, len(f.Security))
+		for _, s := range f.Security {
+			quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+		}
+		out.WriteString(strings.Join(quoted, ", "))
+		out.WriteString("]")
+	}
 
 	out.WriteString("}")
 

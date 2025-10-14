@@ -52,6 +52,7 @@ Each endpoint object represents a queryable resource and has the following prope
 | `schemaName` | string | No | The database schema name (defaults to "dbo") |
 | `fields` | array | Yes | An array of field definitions |
 | `joins` | array | No | An array of join definitions |
+| `security` | string or array | No | Optional permission identifiers required to access the endpoint. Accepts a single string or an array of strings. |
 
 ### Example
 
@@ -102,6 +103,9 @@ For fields with custom settings:
 | `name` | string | Yes | - | The name of the field |
 | `type` | string | No | "STRING" | The data type of the field |
 | `nullable` | boolean | No | true | Whether the field can be null |
+| `security` | string or array | No | - | Optional permission identifiers required to select this field. Accepts a single string or an array of strings. |
+
+Endpoint- and field-level `security` entries are interpreted as identifiers for your authorization system. Providing a single string is equivalent to supplying an array with one element. Omit the key when no additional permissions are required.
 
 ### Supported Data Types
 
@@ -124,12 +128,17 @@ The following data types are supported:
   {
     "name": "CustomerID",
     "type": "STRING",
-    "nullable": false
+    "nullable": false,
+    "security": "field.customers.customerid.view"
   },
   {
     "name": "Balance",
     "type": "FLOAT",
-    "nullable": true
+    "nullable": true,
+    "security": [
+      "field.customers.balance.view",
+      "field.customers.balance.edit"
+    ]
   },
   {
     "name": "CreateDate",
