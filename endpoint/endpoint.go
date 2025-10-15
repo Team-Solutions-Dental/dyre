@@ -97,7 +97,7 @@ type Endpoint struct {
 	Name       string
 	TableName  string
 	SchemaName string
-	Security   []string
+	Security   *SecurityPolicy
 	Joins      map[string]Join
 	JoinNames  []string
 	Fields     map[string]Field
@@ -122,14 +122,30 @@ func (e *Endpoint) JSON() string {
 	out.WriteString(fmt.Sprintf("\"name\" : \"%s\", ", e.Name))
 	out.WriteString(fmt.Sprintf("\"tableName\" : \"%s\", ", e.TableName))
 	out.WriteString(fmt.Sprintf("\"schemaName\" : \"%s\", ", e.SchemaName))
-	if len(e.Security) > 0 {
-		out.WriteString("\"security\" : [")
-		quoted := make([]string, 0, len(e.Security))
-		for _, s := range e.Security {
-			quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+	if e.Security != nil && !e.Security.IsEmpty() {
+		out.WriteString("\"security\" : ")
+		if e.Security.OnDeny == "error" {
+			// Array format for error behavior (backward compatible)
+			out.WriteString("[")
+			quoted := make([]string, 0, len(e.Security.Permissions))
+			for _, s := range e.Security.Permissions {
+				quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+			}
+			out.WriteString(strings.Join(quoted, ", "))
+			out.WriteString("], ")
+		} else {
+			// Object form for omit behavior
+			out.WriteString("{")
+			out.WriteString("\"permissions\": [")
+			quoted := make([]string, 0, len(e.Security.Permissions))
+			for _, s := range e.Security.Permissions {
+				quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+			}
+			out.WriteString(strings.Join(quoted, ", "))
+			out.WriteString("], ")
+			out.WriteString(fmt.Sprintf("\"onDeny\": \"%s\"", e.Security.OnDeny))
+			out.WriteString("}, ")
 		}
-		out.WriteString(strings.Join(quoted, ", "))
-		out.WriteString("], ")
 	}
 	out.WriteString("\"joins\" : [")
 	out.WriteString(strings.Join(joins, ", "))
@@ -162,7 +178,7 @@ type Field struct {
 	Name      string
 	FieldType objectType.Type
 	Nullable  bool
-	Security  []string
+	Security  *SecurityPolicy
 }
 
 func (f *Field) Type() objectType.Type { return f.FieldType }
@@ -174,15 +190,30 @@ func (f *Field) JSON() string {
 	out.WriteString(fmt.Sprintf("\"name\" : \"%s\", ", f.Name))
 	out.WriteString(fmt.Sprintf("\"type\" : \"%s\", ", f.FieldType))
 	out.WriteString(fmt.Sprintf("\"nullable\" : %t", f.Nullable))
-	if len(f.Security) > 0 {
-		out.WriteString(", ")
-		out.WriteString("\"security\" : [")
-		quoted := make([]string, 0, len(f.Security))
-		for _, s := range f.Security {
-			quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+	if f.Security != nil && !f.Security.IsEmpty() {
+		out.WriteString(", \"security\" : ")
+		if f.Security.OnDeny == "error" {
+			// Array format for error behavior (backward compatible)
+			out.WriteString("[")
+			quoted := make([]string, 0, len(f.Security.Permissions))
+			for _, s := range f.Security.Permissions {
+				quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+			}
+			out.WriteString(strings.Join(quoted, ", "))
+			out.WriteString("]")
+		} else {
+			// Object form for omit behavior
+			out.WriteString("{")
+			out.WriteString("\"permissions\": [")
+			quoted := make([]string, 0, len(f.Security.Permissions))
+			for _, s := range f.Security.Permissions {
+				quoted = append(quoted, fmt.Sprintf("\"%s\"", s))
+			}
+			out.WriteString(strings.Join(quoted, ", "))
+			out.WriteString("], ")
+			out.WriteString(fmt.Sprintf("\"onDeny\": \"%s\"", f.Security.OnDeny))
+			out.WriteString("}")
 		}
-		out.WriteString(strings.Join(quoted, ", "))
-		out.WriteString("]")
 	}
 
 	out.WriteString("}")

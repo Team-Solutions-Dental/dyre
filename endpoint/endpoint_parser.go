@@ -97,7 +97,7 @@ func parseEndpoint(m map[string]any, s *Service, index int) (*Endpoint, error) {
 	}
 
 	if security, ok := m["security"]; ok {
-		request.Security, err = parseSecurityList(security)
+		request.Security, err = NormalizeSecurityValue(security)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("Security: %w", err))
 		}
@@ -176,7 +176,7 @@ func parseField(f any, e *Endpoint) (Field, error) {
 		errs = append(errs, err)
 
 		if security, ok := f["security"]; ok {
-			newField.Security, err = parseSecurityList(security)
+			newField.Security, err = NormalizeSecurityValue(security)
 			errs = append(errs, err)
 		}
 

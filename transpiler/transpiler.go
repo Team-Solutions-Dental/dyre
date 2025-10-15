@@ -25,6 +25,8 @@ type IR struct {
 	isGroup                *bool
 	joins                  []*joinIR
 	error                  error
+	securityChecker        endpoint.SecurityChecker
+	omittedFields          map[string]bool // Track fields omitted due to security
 }
 
 type PrimaryIR struct {
@@ -39,27 +41,100 @@ type SubIR struct {
 // Entry into transpiler package
 // Create a new query
 func New(query string, endpoint *endpoint.Endpoint) (*PrimaryIR, error) {
-	if endpoint == nil {
+	return NewWithSecurity(query, endpoint, nil)
+}
+
+// NewWithSecurity creates a new query with security enforcement.
+// If checker is nil, security checks are skipped (permissive behavior).
+func NewWithSecurity(query string, ep *endpoint.Endpoint, checker endpoint.SecurityChecker) (*PrimaryIR, error) {
+	if ep == nil {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
+
+	// Check endpoint-level security first
+	if checker != nil && ep.Security != nil && !ep.Security.IsEmpty() {
+		// Skip check if wildcard is present
+		if !ep.Security.HasWildcard() {
+			allowed, err := checker.Allow(ep.Security.Permissions)
+			if err != nil {
+				return nil, fmt.Errorf("security check failed: %w", err)
+			}
+			if !allowed {
+				if ep.Security.OnDeny == "omit" {
+					// Return empty IR - caller should handle as empty result set
+					emptyAST := &ast.RequestStatements{Statements: []ast.Statement{}}
+					ir := PrimaryIR{IR: IR{
+						endpoint:        ep,
+						ast:             emptyAST,
+						sql:             &sql.Query{BracketedColumns: ep.Service.Settings.BracketedColumns},
+						securityChecker: checker,
+						omittedFields:   make(map[string]bool),
+					}}
+					return &ir, nil
+				}
+				// OnDeny == "error"
+				return nil, fmt.Errorf("permission denied: requires %v", ep.Security.Permissions)
+			}
+		}
+	}
+
 	q, err := parse(query)
-	var ir PrimaryIR = PrimaryIR{IR: IR{endpoint: endpoint,
-		ast:   q,
-		error: err,
-		sql:   &sql.Query{BracketedColumns: endpoint.Service.Settings.BracketedColumns}}}
+	var ir PrimaryIR = PrimaryIR{IR: IR{
+		endpoint:        ep,
+		ast:             q,
+		error:           err,
+		sql:             &sql.Query{BracketedColumns: ep.Service.Settings.BracketedColumns},
+		securityChecker: checker,
+		omittedFields:   make(map[string]bool),
+	}}
 	return &ir, err
 }
 
 // Sub IR is excludes methods unique to top level query
 func newSubIR(query string, endpoint *endpoint.Endpoint) (*SubIR, error) {
-	if endpoint == nil {
+	return newSubIRWithSecurity(query, endpoint, nil)
+}
+
+// newSubIRWithSecurity creates a SubIR with security enforcement for joined tables
+func newSubIRWithSecurity(query string, ep *endpoint.Endpoint, checker endpoint.SecurityChecker) (*SubIR, error) {
+	if ep == nil {
 		return nil, errors.New("No end point provided for query: " + query)
 	}
+
+	// Check endpoint-level security for joined table
+	if checker != nil && ep.Security != nil && !ep.Security.IsEmpty() {
+		if !ep.Security.HasWildcard() {
+			allowed, err := checker.Allow(ep.Security.Permissions)
+			if err != nil {
+				return nil, fmt.Errorf("security check failed for join %s: %w", ep.Name, err)
+			}
+			if !allowed {
+				if ep.Security.OnDeny == "omit" {
+					// Return empty IR for joined table
+					emptyAST := &ast.RequestStatements{Statements: []ast.Statement{}}
+					ir := SubIR{IR: IR{
+						endpoint:        ep,
+						ast:             emptyAST,
+						sql:             &sql.Query{BracketedColumns: ep.Service.Settings.BracketedColumns},
+						securityChecker: checker,
+						omittedFields:   make(map[string]bool),
+					}}
+					return &ir, nil
+				}
+				return nil, fmt.Errorf("permission denied for join %s: requires %v", ep.Name, ep.Security.Permissions)
+			}
+		}
+	}
+
 	q, err := parse(query)
-	var ir SubIR = SubIR{IR: IR{endpoint: endpoint,
-		ast:   q,
-		error: err,
-		sql:   &sql.Query{BracketedColumns: endpoint.Service.Settings.BracketedColumns}}}
+	var ir SubIR = SubIR{IR: IR{
+		endpoint:        ep,
+		ast:             q,
+		error:           err,
+		sql:             &sql.Query{BracketedColumns: ep.Service.Settings.BracketedColumns},
+		securityChecker: checker,
+		omittedFields:   make(map[string]bool),
+	}}
 	return &ir, err
 }
 
@@ -75,6 +150,48 @@ func (ir *IR) checkGroup(expected bool) bool {
 	}
 
 	return false
+}
+
+// checkFieldSecurity checks if the current user has permission to access a field.
+// Returns an error object if denied with onDeny="error", or records omission if onDeny="omit".
+func (ir *IR) checkFieldSecurity(field *endpoint.Field) object.Object {
+	if ir.securityChecker == nil {
+		return nil
+	}
+
+	// Determine the security policy: use field policy, or inherit from endpoint
+	policy := field.Security
+	if policy == nil || policy.IsEmpty() {
+		policy = ir.endpoint.Security
+	}
+
+	// No security policy means no restrictions
+	if policy == nil || policy.IsEmpty() {
+		return nil
+	}
+
+	// Wildcard means access is always allowed
+	if policy.HasWildcard() {
+		return nil
+	}
+
+	// Check permissions
+	allowed, err := ir.securityChecker.Allow(policy.Permissions)
+	if err != nil {
+		return newError("security check failed for field %s: %v", field.Name, err)
+	}
+
+	if !allowed {
+		if policy.OnDeny == "omit" {
+			// Mark field as omitted and continue
+			ir.omittedFields[field.Name] = true
+			return nil
+		}
+		// OnDeny == "error"
+		return newError("permission denied for field %s: requires %v", field.Name, policy.Permissions)
+	}
+
+	return nil
 }
 
 // Parse incoming request
@@ -256,6 +373,16 @@ func evalColumnLiteral(node *ast.ColumnLiteral, ir *IR, local *objectRef.LocalRe
 	}
 
 	column := ir.endpoint.Fields[node.TokenLiteral()]
+
+	// Check field-level security
+	if err := ir.checkFieldSecurity(&column); err != nil {
+		return err
+	}
+
+	// If field was omitted due to security, skip adding to select
+	if ir.omittedFields[column.Name] {
+		return nil
+	}
 
 	selectStatementLoc := ir.sql.SelectStatementLocation(column.Name)
 	if selectStatementLoc >= 0 {
