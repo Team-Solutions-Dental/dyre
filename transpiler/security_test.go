@@ -298,3 +298,220 @@ func TestSecurity_RoleChecker(t *testing.T) {
 		}
 	}
 }
+
+// Helper to create service with joined endpoints for testing
+func createServiceWithJoins() *endpoint.Service {
+	service := &endpoint.Service{
+		Settings: endpoint.Settings{BracketedColumns: true},
+	}
+
+	customers := &endpoint.Endpoint{
+		Service:    service,
+		Name:       "Customers",
+		TableName:  "Customers",
+		SchemaName: "dbo",
+		Security: &endpoint.SecurityPolicy{
+			Permissions: []string{"customers.read"},
+			OnDeny:      "error",
+		},
+		Fields: map[string]endpoint.Field{
+			"CustomerID": {
+				Name:      "CustomerID",
+				FieldType: objectType.INTEGER,
+				Nullable:  false,
+			},
+			"Name": {
+				Name:      "Name",
+				FieldType: objectType.STRING,
+				Nullable:  true,
+			},
+		},
+		FieldNames: []string{"CustomerID", "Name"},
+	}
+
+	invoices := &endpoint.Endpoint{
+		Service:    service,
+		Name:       "Invoices",
+		TableName:  "Invoices",
+		SchemaName: "dbo",
+		Security: &endpoint.SecurityPolicy{
+			Permissions: []string{"invoices.read"},
+			OnDeny:      "error",
+		},
+		Fields: map[string]endpoint.Field{
+			"InvoiceID": {
+				Name:      "InvoiceID",
+				FieldType: objectType.INTEGER,
+				Nullable:  false,
+			},
+			"CustomerID": {
+				Name:      "CustomerID",
+				FieldType: objectType.INTEGER,
+				Nullable:  false,
+			},
+			"Amount": {
+				Name:      "Amount",
+				FieldType: objectType.FLOAT,
+				Nullable:  true,
+				Security: &endpoint.SecurityPolicy{
+					Permissions: []string{"invoices.amount.view"},
+					OnDeny:      "omit",
+				},
+			},
+		},
+		FieldNames: []string{"InvoiceID", "CustomerID", "Amount"},
+	}
+
+	// Set endpoint references in fields
+	for name, field := range customers.Fields {
+		field.Endpoint = customers
+		customers.Fields[name] = field
+	}
+	for name, field := range invoices.Fields {
+		field.Endpoint = invoices
+		invoices.Fields[name] = field
+	}
+
+	// Setup join from Customers to Invoices
+	join := endpoint.Join{}
+	join.Parent_ON = "CustomerID"
+	join.Child_ON = "CustomerID"
+	customers.Joins = map[string]endpoint.Join{
+		"Invoices": join,
+	}
+	customers.JoinNames = []string{"Invoices"}
+
+	service.Endpoints = map[string]*endpoint.Endpoint{
+		"Customers": customers,
+		"Invoices":  invoices,
+	}
+	service.EndpointNames = []string{"Customers", "Invoices"}
+
+	return service
+}
+
+func TestJoinSecurity_PropagatesChecker(t *testing.T) {
+	service := createServiceWithJoins()
+	customersEp := service.Endpoints["Customers"]
+
+	// Grant access to customers but NOT invoices
+	checker := endpoint.NewStaticChecker(map[string]struct{}{
+		"customers.read": {},
+	})
+
+	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Try to join Invoices without permission
+	joinIR := ir.INNERJOIN("Invoices").ON("CustomerID", "CustomerID")
+	_, err = joinIR.Query("InvoiceID:")
+
+	if err == nil {
+		t.Fatal("expected permission denied error for joined endpoint")
+	}
+	if !strings.Contains(err.Error(), "permission denied") {
+		t.Errorf("expected 'permission denied' error, got: %v", err)
+	}
+}
+
+func TestJoinSecurity_AllowedJoin(t *testing.T) {
+	service := createServiceWithJoins()
+	customersEp := service.Endpoints["Customers"]
+
+	// Grant access to both customers and invoices
+	checker := endpoint.NewStaticChecker(map[string]struct{}{
+		"customers.read": {},
+		"invoices.read":  {},
+	})
+
+	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	joinIR := ir.INNERJOIN("Invoices").ON("CustomerID", "CustomerID")
+	_, err = joinIR.Query("InvoiceID:")
+	if err != nil {
+		t.Fatalf("unexpected error on allowed join: %v", err)
+	}
+
+	sql, err := ir.EvaluateQuery()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(sql, "INNER JOIN") {
+		t.Error("expected INNER JOIN in query")
+	}
+	if !strings.Contains(sql, "Invoices") {
+		t.Error("expected Invoices table in query")
+	}
+}
+
+func TestJoinSecurity_FieldOmissionInJoin(t *testing.T) {
+	service := createServiceWithJoins()
+	customersEp := service.Endpoints["Customers"]
+
+	// Grant access to customers and invoices, but NOT to invoices.amount.view
+	checker := endpoint.NewStaticChecker(map[string]struct{}{
+		"customers.read": {},
+		"invoices.read":  {},
+		// Note: invoices.amount.view is NOT granted
+	})
+
+	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	joinIR := ir.INNERJOIN("Invoices").ON("CustomerID", "CustomerID")
+	_, err = joinIR.Query("InvoiceID:Amount:")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	sql, err := ir.EvaluateQuery()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should have InvoiceID but not Amount (omitted)
+	if !strings.Contains(sql, "InvoiceID") {
+		t.Error("expected InvoiceID in query")
+	}
+	if strings.Contains(sql, "Amount") {
+		t.Error("expected Amount to be omitted from query")
+	}
+}
+
+func TestJoinSecurity_NilCheckerInJoin(t *testing.T) {
+	service := createServiceWithJoins()
+	customersEp := service.Endpoints["Customers"]
+
+	// Nil checker should allow everything in joins too
+	ir, err := NewWithSecurity("CustomerID:", customersEp, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	joinIR := ir.INNERJOIN("Invoices").ON("CustomerID", "CustomerID")
+	_, err = joinIR.Query("InvoiceID:Amount:")
+	if err != nil {
+		t.Fatalf("unexpected error with nil checker: %v", err)
+	}
+
+	sql, err := ir.EvaluateQuery()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Both fields should be present
+	if !strings.Contains(sql, "InvoiceID") {
+		t.Error("expected InvoiceID in query")
+	}
+	if !strings.Contains(sql, "Amount") {
+		t.Error("expected Amount in query with nil checker")
+	}
+}

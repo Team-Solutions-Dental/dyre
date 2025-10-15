@@ -87,7 +87,7 @@ func (js *joinIR) Query(query string) (*SubIR, error) {
 
 	js.endpoint = ep
 
-	js.childIR, err = newSubIR(query, js.endpoint)
+	js.childIR, err = newSubIRWithSecurity(query, js.endpoint, js.parentIR.securityChecker)
 	if err != nil {
 		return nil, err
 	}
