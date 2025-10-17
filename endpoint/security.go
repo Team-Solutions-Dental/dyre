@@ -48,7 +48,7 @@ func NormalizeSecurityValue(value any) (*SecurityPolicy, error) {
 
 	switch v := value.(type) {
 	case string:
-		// String shorthand: "customers.read" -> {permissions: ["customers.read"], onDeny: "error"}
+		// String shorthand: "customers:read" -> {permissions: ["customers:read"], onDeny: "error"}
 		perms, err := parseSecurityList(v)
 		if err != nil {
 			return nil, err

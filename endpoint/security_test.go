@@ -5,15 +5,15 @@ import (
 )
 
 func TestNormalizeSecurityValue_String(t *testing.T) {
-	policy, err := NormalizeSecurityValue("customers.read")
+	policy, err := NormalizeSecurityValue("customers:read")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if policy == nil {
 		t.Fatal("expected policy, got nil")
 	}
-	if len(policy.Permissions) != 1 || policy.Permissions[0] != "customers.read" {
-		t.Errorf("expected permissions [customers.read], got %v", policy.Permissions)
+	if len(policy.Permissions) != 1 || policy.Permissions[0] != "customers:read" {
+		t.Errorf("expected permissions [customers:read], got %v", policy.Permissions)
 	}
 	if policy.OnDeny != "error" {
 		t.Errorf("expected onDeny 'error', got %s", policy.OnDeny)

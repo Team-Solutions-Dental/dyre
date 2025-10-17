@@ -15,7 +15,7 @@ func TestParseJSON(t *testing.T) {
     "tableName": "Customers",
     "schemaName": "dbo",
     "security": [
-      "endpoint.customers.read"
+      "endpoint:customers:read"
     ],
     "joins": [
       {
@@ -32,7 +32,7 @@ func TestParseJSON(t *testing.T) {
         "type": "STRING",
         "nullable": false,
         "security": [
-          "field.customers.customerid.view"
+          "field:customers:customerid:view"
         ]
       },
       {
@@ -50,8 +50,8 @@ func TestParseJSON(t *testing.T) {
         "type": "DATE",
         "nullable": true,
         "security": [
-          "field.customers.createdate.view",
-          "field.customers.createdate.edit"
+          "field:customers:createdate:view",
+          "field:customers:createdate:edit"
         ]
       },
       {
@@ -71,8 +71,8 @@ func TestParseJSON(t *testing.T) {
     "tableName": "Invoices",
     "schemaName": "dbo",
     "security": [
-      "endpoint.invoices.read",
-      "endpoint.invoices.audit"
+      "endpoint:invoices:read",
+      "endpoint:invoices:audit"
     ],
     "joins": [
       {
@@ -94,7 +94,7 @@ func TestParseJSON(t *testing.T) {
         "type": "FLOAT",
         "nullable": true,
         "security": [
-          "field.invoices.balance.view"
+          "field:invoices:balance:view"
         ]
       },
       {
@@ -223,7 +223,7 @@ func testingJSON() string {
     "name": "Customers",
     "tableName": "Customers",
     "schemaName": "dbo",
-    "security": "endpoint.customers.read",
+    "security": "endpoint:customers:read",
     "joins": [
       {
         "endpoint": "Invoices",
@@ -235,7 +235,7 @@ func testingJSON() string {
         "name": "CustomerID",
         "nullable": false,
         "security": [
-          "field.customers.customerid.view"
+          "field:customers:customerid:view"
         ]
       },
       "FirstName",
@@ -244,8 +244,8 @@ func testingJSON() string {
         "name": "CreateDate",
         "type": "date",
         "security": [
-          "field.customers.createdate.view",
-          "field.customers.createdate.edit"
+          "field:customers:createdate:view",
+          "field:customers:createdate:edit"
         ]
       },
       {
@@ -263,8 +263,8 @@ func testingJSON() string {
     "tableName": "Invoices",
     "schemaName": "dbo",
     "security": [
-      "endpoint.invoices.read",
-      "endpoint.invoices.audit"
+      "endpoint:invoices:read",
+      "endpoint:invoices:audit"
     ],
     "joins": [
       {
@@ -284,7 +284,7 @@ func testingJSON() string {
         "name": "Balance",
         "type": "float",
         "security": [
-          "field.invoices.balance.view"
+          "field:invoices:balance:view"
         ]
       },
       {

@@ -20,7 +20,7 @@ func createTestEndpointWithSecurity() *endpoint.Endpoint {
 		TableName:  "Customers",
 		SchemaName: "dbo",
 		Security: &endpoint.SecurityPolicy{
-			Permissions: []string{"customers.read"},
+			Permissions: []string{"customers:read"},
 			OnDeny:      "error",
 		},
 		Fields: map[string]endpoint.Field{
@@ -29,7 +29,7 @@ func createTestEndpointWithSecurity() *endpoint.Endpoint {
 				FieldType: objectType.INTEGER,
 				Nullable:  false,
 				Security: &endpoint.SecurityPolicy{
-					Permissions: []string{"customers.customerid.view"},
+					Permissions: []string{"customers:customerid:view"},
 					OnDeny:      "error",
 				},
 			},
@@ -38,7 +38,7 @@ func createTestEndpointWithSecurity() *endpoint.Endpoint {
 				FieldType: objectType.STRING,
 				Nullable:  true,
 				Security: &endpoint.SecurityPolicy{
-					Permissions: []string{"customers.email.view"},
+					Permissions: []string{"customers:email:view"},
 					OnDeny:      "omit",
 				},
 			},
@@ -73,8 +73,8 @@ func createTestEndpointWithSecurity() *endpoint.Endpoint {
 func TestEndpointSecurity_Success(t *testing.T) {
 	ep := createTestEndpointWithSecurity()
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read":            {},
-		"customers.customerid.view": {},
+		"customers:read":            {},
+		"customers:customerid:view": {},
 	})
 
 	ir, err := NewWithSecurity("CustomerID:", ep, checker)
@@ -130,9 +130,9 @@ func TestEndpointSecurity_DeniedWithOmit(t *testing.T) {
 func TestFieldSecurity_OmittedColumn(t *testing.T) {
 	ep := createTestEndpointWithSecurity()
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read":            {},
-		"customers.customerid.view": {},
-		// Note: customers.email.view is NOT granted
+		"customers:read":            {},
+		"customers:customerid:view": {},
+		// Note: customers:email:view is NOT granted
 	})
 
 	ir, err := NewWithSecurity("CustomerID:Email:", ep, checker)
@@ -163,8 +163,8 @@ func TestFieldSecurity_OmittedColumn(t *testing.T) {
 func TestFieldSecurity_ErrorOnDeny(t *testing.T) {
 	ep := createTestEndpointWithSecurity()
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {},
-		// Note: customers.customerid.view is NOT granted, and it has onDeny="error"
+		"customers:read": {},
+		// Note: customers:customerid:view is NOT granted, and it has onDeny="error"
 	})
 
 	ir, err := NewWithSecurity("CustomerID:", ep, checker)
@@ -184,7 +184,7 @@ func TestFieldSecurity_ErrorOnDeny(t *testing.T) {
 func TestFieldSecurity_InheritsFromEndpoint(t *testing.T) {
 	ep := createTestEndpointWithSecurity()
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {}, // endpoint permission granted
+		"customers:read": {}, // endpoint permission granted
 		// Name field has no security, so it inherits from endpoint
 	})
 
@@ -206,7 +206,7 @@ func TestFieldSecurity_InheritsFromEndpoint(t *testing.T) {
 func TestFieldSecurity_WildcardAlwaysAllowed(t *testing.T) {
 	ep := createTestEndpointWithSecurity()
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {},
+		"customers:read": {},
 		// Notes field has wildcard "*", so it should be allowed without explicit grant
 	})
 
@@ -311,7 +311,7 @@ func createServiceWithJoins() *endpoint.Service {
 		TableName:  "Customers",
 		SchemaName: "dbo",
 		Security: &endpoint.SecurityPolicy{
-			Permissions: []string{"customers.read"},
+			Permissions: []string{"customers:read"},
 			OnDeny:      "error",
 		},
 		Fields: map[string]endpoint.Field{
@@ -335,7 +335,7 @@ func createServiceWithJoins() *endpoint.Service {
 		TableName:  "Invoices",
 		SchemaName: "dbo",
 		Security: &endpoint.SecurityPolicy{
-			Permissions: []string{"invoices.read"},
+			Permissions: []string{"invoices:read"},
 			OnDeny:      "error",
 		},
 		Fields: map[string]endpoint.Field{
@@ -354,7 +354,7 @@ func createServiceWithJoins() *endpoint.Service {
 				FieldType: objectType.FLOAT,
 				Nullable:  true,
 				Security: &endpoint.SecurityPolicy{
-					Permissions: []string{"invoices.amount.view"},
+					Permissions: []string{"invoices:amount:view"},
 					OnDeny:      "omit",
 				},
 			},
@@ -396,7 +396,7 @@ func TestJoinSecurity_PropagatesChecker(t *testing.T) {
 
 	// Grant access to customers but NOT invoices
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {},
+		"customers:read": {},
 	})
 
 	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)
@@ -422,8 +422,8 @@ func TestJoinSecurity_AllowedJoin(t *testing.T) {
 
 	// Grant access to both customers and invoices
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {},
-		"invoices.read":  {},
+		"customers:read": {},
+		"invoices:read":  {},
 	})
 
 	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)
@@ -454,11 +454,11 @@ func TestJoinSecurity_FieldOmissionInJoin(t *testing.T) {
 	service := createServiceWithJoins()
 	customersEp := service.Endpoints["Customers"]
 
-	// Grant access to customers and invoices, but NOT to invoices.amount.view
+	// Grant access to customers and invoices, but NOT to invoices:amount:view
 	checker := endpoint.NewStaticChecker(map[string]struct{}{
-		"customers.read": {},
-		"invoices.read":  {},
-		// Note: invoices.amount.view is NOT granted
+		"customers:read": {},
+		"invoices:read":  {},
+		// Note: invoices:amount:view is NOT granted
 	})
 
 	ir, err := NewWithSecurity("CustomerID:", customersEp, checker)

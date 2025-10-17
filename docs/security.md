@@ -25,9 +25,9 @@ The security enforcement system provides:
 
 | Form | Example | Meaning |
 | --- | --- | --- |
-| String | `"customers.read"` | Require one permission; error on deny. |
-| Array | `["customers.view", "customers.edit"]` | Require *all* listed permissions; error on deny. |
-| Object | `{"permissions": ["customers.email.view"], "onDeny": "omit"}` | Require all permissions; omit on deny. |
+| String | `"customers:read"` | Require one permission; error on deny. |
+| Array | `["customers:view", "customers:edit"]` | Require *all* listed permissions; error on deny. |
+| Object | `{"permissions": ["customers:email:view"], "onDeny": "omit"}` | Require all permissions; omit on deny. |
 
 The values provided should originate from the host application's role or permission catalogue; Dyre does not impose additional namespacing or prefixes.
 
@@ -38,19 +38,19 @@ The values provided should originate from the host application's role or permiss
   "name": "Customers",
   "tableName": "dbo.Customers",
   "security": {
-    "permissions": ["customers.read"],
+    "permissions": ["customers:read"],
     "onDeny": "error"
   },
   "fields": [
     {
       "name": "CustomerID",
       "nullable": false,
-      "security": "customers.customerid.read"
+      "security": "customers:customerid:read"
     },
     {
       "name": "Email",
       "security": {
-        "permissions": ["customers.email.view", "customers.email.manage"],
+        "permissions": ["customers:email:view", "customers:email:manage"],
         "onDeny": "omit"
       }
     },
@@ -68,7 +68,7 @@ The values provided should originate from the host application's role or permiss
 
 ### Rules
 
-- `permissions` is a non-empty array of host-defined role or permission identifiers (e.g., `"customers.read"`). Avoid redundant prefixes; reuse the exact tokens enforced by your auth layer.
+- `permissions` is a non-empty array of host-defined role or permission identifiers (e.g., `"customers:read"`). Avoid redundant prefixes; reuse the exact tokens enforced by your auth layer.
 - The literal `"*"` acts as a catch-all and always evaluates to allowed without involving the checker. Use it for fields that inherit access from broader roles while keeping consistent metadata.
 - `onDeny` defaults to `"error"`; setting `"omit"` causes unauthorized columns to be skipped where possible.
 - String and array shorthand are internally normalised to `{ permissions: [...], onDeny: "error" }`.
@@ -78,14 +78,14 @@ The values provided should originate from the host application's role or permiss
 **String Shorthand (Single Permission)**
 ```json
 {
-  "security": "customers.read"
+  "security": "customers:read"
 }
 ```
 
 **Array Format (Multiple Permissions, Error on Deny)**
 ```json
 {
-  "security": ["customers.read", "customers.audit"]
+  "security": ["customers:read", "customers:audit"]
 }
 ```
 
@@ -93,7 +93,7 @@ The values provided should originate from the host application's role or permiss
 ```json
 {
   "security": {
-    "permissions": ["customers.email.view"],
+    "permissions": ["customers:email:view"],
     "onDeny": "omit"
   }
 }
@@ -133,8 +133,8 @@ func NewWithSecurity(query string, ep *endpoint.Endpoint, checker SecurityChecke
 **StaticChecker**: Checks against a fixed set of permissions
 ```go
 checker := endpoint.NewStaticChecker(map[string]struct{}{
-    "customers.read": {},
-    "customers.customerid.view": {},
+    "customers:read": {},
+    "customers:customerid:view": {},
 })
 ```
 
@@ -172,7 +172,7 @@ checker := endpoint.NewPermissiveChecker()
 ### Admin or Aggregated Permissions
 
 - The `SecurityChecker` is responsible for expanding higher-level roles (e.g., `admin`) into the granular identifiers referenced by endpoints and fields.
-- You can return `true` from `Allow` when a caller holds an aggregated permission that covers the requested identifiers. Example: treat `admin` as satisfying every permission under `customers.*`.
+- You can return `true` from `Allow` when a caller holds an aggregated permission that covers the requested identifiers. Example: treat `admin` as satisfying every permission under `customers:*`.
 - Use the `"*"` policy entry when you want the schema itself to mark a resource as universally accessible (or already handled upstream).
 
 ## Usage Examples
@@ -182,8 +182,8 @@ checker := endpoint.NewPermissiveChecker()
 ```go
 // Create a checker with granted permissions
 checker := endpoint.NewStaticChecker(map[string]struct{}{
-    "customers.read": {},
-    "customers.customerid.view": {},
+    "customers:read": {},
+    "customers:customerid:view": {},
 })
 
 // Create IR with security enforcement
@@ -200,8 +200,8 @@ sql, err := ir.EvaluateQuery()
 
 ```go
 checker := endpoint.NewStaticChecker(map[string]struct{}{
-    "customers.read": {},
-    "customers.customerid.read": {},
+    "customers:read": {},
+    "customers:customerid:read": {},
 })
 
 ir, err := transpiler.NewWithSecurity("CustomerID:", customersEndpoint, checker)
@@ -226,7 +226,7 @@ sql, _ := ir.EvaluateQuery()
 checker := endpoint.NewStaticChecker(map[string]struct{}{})
 
 _, err := transpiler.NewWithSecurity("CustomerID:", customersEndpoint, checker)
-// err => "permission denied: requires [customers.read]"
+// err => "permission denied: requires [customers:read]"
 ```
 
 ### Admin Role Expansion
@@ -253,6 +253,28 @@ ir, err := transpiler.New(query, endpoint)
 
 // Or explicitly:
 ir, err := transpiler.NewWithSecurity(query, endpoint, nil)
+```
+
+### Join Security
+
+Security enforcement automatically propagates to joined tables:
+
+```go
+checker := endpoint.NewStaticChecker(map[string]struct{}{
+    "customers:read": {},
+    "invoices:read":  {},
+    "invoices:amount:view": {},
+})
+
+// Create IR with security
+ir, err := transpiler.NewWithSecurity("CustomerID:", customersEp, checker)
+
+// Join Invoices - security checker is automatically propagated
+joinIR := ir.INNERJOIN("Invoices").ON("CustomerID", "CustomerID")
+_, err = joinIR.Query("InvoiceID:Amount:")
+
+// If user lacks "invoices:read", join creation fails
+// If user lacks "invoices:amount:view", Amount field is omitted based on its onDeny policy
 ```
 
 ## Implementation Details
@@ -289,7 +311,7 @@ ir, err := transpiler.NewWithSecurity(query, endpoint, nil)
 
 - **FieldNames()**: Automatically reflects omissions (returns actual SQL select list)
 - **TypeScript generation**: Shows full schema (represents available fields, not user-specific view)
-- **Join propagation**: Security checker propagates to SubIR for joined tables
+- **Join propagation**: Security checker automatically propagates from parent IR to all joined SubIRs, ensuring consistent enforcement across the entire query tree
 
 ### Expressions and References
 
@@ -323,12 +345,16 @@ ir, err := transpiler.NewWithSecurity(query, endpoint, nil)
 - Nil checker (permissive backward compatibility)
 - PermissiveChecker and RoleChecker
 - FieldNames() reflects omissions
+- Join security propagation (checker passed to joined tables)
+- Joined endpoint access denial
+- Field omission in joined tables
+- Nil checker in joins
 
 ### Test Results
 
 All tests passing:
 - endpoint package: 15 tests (including 12 new security tests)
-- transpiler package: 25 tests (including 10 new security tests)
+- transpiler package: 29 tests (including 14 new security tests, 4 for join security)
 - parser, lexer packages: All existing tests pass
 - No breaking changes to existing functionality
 
