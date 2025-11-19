@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/object"
-	"github.com/vamuscari/dyre/object/objectRef"
-	"github.com/vamuscari/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/object"
+	"github.com/Team-Solutions-Dental/dyre/object/objectRef"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
 )
 
 type Query struct {

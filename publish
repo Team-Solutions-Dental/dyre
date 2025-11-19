@@ -1,16 +1,14 @@
 #!/bin/bash
 go mod tidy
 
-
-version=$( git describe --exact-match --tags )
+version=$(git describe --exact-match --tags)
 
 if ! go test .; then
-    echo Failed Test
-    echo Exiting
-    exit 1
+  echo Failed Test
+  echo Exiting
+  exit 1
 fi
-
 
 git push origin $version
 
-GOPROXY=proxy.golang.org go list -m github.com/vamuscari/dyre@$version
+GOPROXY=proxy.golang.org go list -m github.com/Team-Solutions-Dental/dyre@$version

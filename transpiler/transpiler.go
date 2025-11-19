@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/ast"
-	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/lexer"
-	"github.com/vamuscari/dyre/object"
-	"github.com/vamuscari/dyre/object/objectRef"
-	"github.com/vamuscari/dyre/object/objectType"
-	"github.com/vamuscari/dyre/parser"
-	"github.com/vamuscari/dyre/sql"
-	"github.com/vamuscari/dyre/utils"
+	"github.com/Team-Solutions-Dental/dyre/ast"
+	"github.com/Team-Solutions-Dental/dyre/endpoint"
+	"github.com/Team-Solutions-Dental/dyre/lexer"
+	"github.com/Team-Solutions-Dental/dyre/object"
+	"github.com/Team-Solutions-Dental/dyre/object/objectRef"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/parser"
+	"github.com/Team-Solutions-Dental/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/utils"
 )
 
 // Intermediate Representation

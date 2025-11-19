@@ -1,13 +1,13 @@
 package endpoint
-
+ 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/object/objectType"
-	"github.com/vamuscari/dyre/utils"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/utils"
 )
 
 func ParseJSON(b []byte) (*Service, error) {

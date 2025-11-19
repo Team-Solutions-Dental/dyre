@@ -1,9 +1,9 @@
 package transpiler
 
 import (
-	"github.com/vamuscari/dyre/ast"
-	"github.com/vamuscari/dyre/object"
-	"github.com/vamuscari/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/ast"
+	"github.com/Team-Solutions-Dental/dyre/object"
+	"github.com/Team-Solutions-Dental/dyre/sql"
 )
 
 // PrimaryIR can use OrderBy

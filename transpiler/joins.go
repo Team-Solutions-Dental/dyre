@@ -2,8 +2,8 @@ package transpiler
 
 import (
 	"fmt"
-	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/endpoint"
+	"github.com/Team-Solutions-Dental/dyre/sql"
 	"strings"
 )
 

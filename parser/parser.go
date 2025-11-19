@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/vamuscari/dyre/ast"
-	"github.com/vamuscari/dyre/lexer"
-	"github.com/vamuscari/dyre/token"
+	"github.com/Team-Solutions-Dental/dyre/ast"
+	"github.com/Team-Solutions-Dental/dyre/lexer"
+	"github.com/Team-Solutions-Dental/dyre/token"
 )
 
 const (

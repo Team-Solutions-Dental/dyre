@@ -2,7 +2,7 @@ package ast
 
 import (
 	"bytes"
-	"github.com/vamuscari/dyre/token"
+	"github.com/Team-Solutions-Dental/dyre/token"
 	"strings"
 )
 

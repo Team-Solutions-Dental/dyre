@@ -1,9 +1,9 @@
 package transpiler
 
 import (
-	"github.com/vamuscari/dyre/object"
-	"github.com/vamuscari/dyre/object/objectType"
-	"github.com/vamuscari/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/object"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/sql"
 )
 
 var columnFunctions = map[string]func(ir *IR, args ...object.Object) object.Object{

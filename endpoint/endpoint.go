@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vamuscari/dyre/object/objectType"
-	"github.com/vamuscari/dyre/sql"
-	"github.com/vamuscari/dyre/utils"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/utils"
 )
 
 var default_type objectType.Type = objectType.STRING

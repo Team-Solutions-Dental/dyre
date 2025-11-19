@@ -3,8 +3,8 @@ package transpiler
 import (
 	"testing"
 
-	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/endpoint"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
 )
 
 func TestSingleJoins(t *testing.T) {

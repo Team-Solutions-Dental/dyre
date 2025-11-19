@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/vamuscari/dyre/ast"
-	"github.com/vamuscari/dyre/lexer"
+	"github.com/Team-Solutions-Dental/dyre/ast"
+	"github.com/Team-Solutions-Dental/dyre/lexer"
 )
 
 func TestColumnStatement(t *testing.T) {

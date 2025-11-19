@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/transpiler"
+	"github.com/Team-Solutions-Dental/dyre/endpoint"
+	"github.com/Team-Solutions-Dental/dyre/transpiler"
 )
 
 func Init(filepath string) Dyre {

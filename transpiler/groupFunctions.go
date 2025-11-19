@@ -1,10 +1,10 @@
 package transpiler
 
 import (
-	"github.com/vamuscari/dyre/object"
-	"github.com/vamuscari/dyre/object/objectRef"
-	"github.com/vamuscari/dyre/object/objectType"
-	"github.com/vamuscari/dyre/sql"
+	"github.com/Team-Solutions-Dental/dyre/object"
+	"github.com/Team-Solutions-Dental/dyre/object/objectRef"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/sql"
 )
 
 var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object{
@@ -251,7 +251,7 @@ func groupColumn(ir *IR, local *objectRef.LocalReferences, args ...object.Object
 		local.Set(field.Name, objectRef.GROUP)
 		groupSelect.Query = ir.sql
 		groupSelect.FieldName = &name.Value
-		groupSelect.TableName = &ir.endpoint.Name
+		groupSelect.TableName = &ir.endpoint.TableName
 		groupSelect.ObjType = field.Type()
 		groupSelect.HasNull = field.Nullable
 	} else if joined_ok {

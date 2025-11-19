@@ -3,7 +3,7 @@ package object
 import (
 	"fmt"
 
-	"github.com/vamuscari/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
 )
 
 type Object interface {

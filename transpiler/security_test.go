@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vamuscari/dyre/endpoint"
-	"github.com/vamuscari/dyre/object/objectType"
+	"github.com/Team-Solutions-Dental/dyre/endpoint"
+	"github.com/Team-Solutions-Dental/dyre/object/objectType"
 )
 
 // Helper to create a test endpoint with security

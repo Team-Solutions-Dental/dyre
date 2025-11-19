@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"github.com/vamuscari/dyre/token"
+	"github.com/Team-Solutions-Dental/dyre/token"
 )
 
 type Lexer struct {
