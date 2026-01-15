@@ -30,7 +30,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("wrong number of arguments. got=%d, want=1", len(args))
 		}
 
-		return &object.Expression{Expression: objectType.EXPRESSION,
+		return &object.Expression{ExpressionType: objectType.EXPRESSION,
 			Value: fmt.Sprintf("DISTINCT %s", args[0])}	
 	},
 	//cast(expression, to)
