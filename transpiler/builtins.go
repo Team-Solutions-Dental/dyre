@@ -25,6 +25,15 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		}
 
 	},
+	"distinct": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("wrong number of arguments. got=%d, want=1", len(args))
+		}
+
+		arg := args[0]
+
+		return &object.Expression{Value: fmt.Sprintf("DISTINCT %s", args[0])}	
+	}
 	//cast(expression, to)
 	"cast": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
