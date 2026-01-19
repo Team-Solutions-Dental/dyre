@@ -173,4 +173,20 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("Invalid Type. %s %s", column.Type(), column.String())
 		}
 	},
+	"unlike": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
+		}
+
+		column := args[0]
+		comparison := args[1]
+
+		switch {
+		case column.Type() == objectType.STRING:
+			return &object.Expression{ExpressionType: objectType.BOOLEAN,
+				Value: fmt.Sprintf("(%s NOT LIKE %s)", column.String(), comparison.String())}
+		default:
+			return newError("Invalid Type. %s %s", column.Type(), column.String())
+		}
+	},
 }
