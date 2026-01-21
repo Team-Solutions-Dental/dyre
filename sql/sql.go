@@ -14,6 +14,7 @@ type Query struct {
 	AliasWhereStatements []string
 	TableAlias           string
 	Limit                *int
+	Offset               *int
 	From                 string
 	TableName            string
 	WhereStatements      []string
@@ -46,7 +47,7 @@ func (q *Query) ConstructQuery() string {
 func (q *Query) tableQuery() string {
 	var query string = "SELECT "
 
-	if q.Limit != nil && *q.Limit > 0 {
+	if q.Limit != nil && *q.Limit > 0  && len(q.OrderBy) == 0 {
 		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
 	}
 
@@ -63,8 +64,18 @@ func (q *Query) tableQuery() string {
 	}
 
 	if len(q.OrderBy) > 0 {
-		query = query + orderByConstructor(q.OrderBy)
-	}
+		var offset int = 0
+		if q.Offset != nil {
+			offset = *q.Offset 
+		}
+
+		var limit int = 0
+		if q.Limit != nil {
+			limit = *q.Limit
+		}
+
+		query = query + orderByConstructor(q.OrderBy, limit, offset)
+	}	
 
 	return query
 }
@@ -72,7 +83,7 @@ func (q *Query) tableQuery() string {
 func (q *Query) aliasQuery() string {
 	var query string = "SELECT "
 
-	if q.Limit != nil && *q.Limit > 0 {
+	if q.Limit != nil && *q.Limit > 0 && len(q.OrderBy) == 0 {
 		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
 	}
 
@@ -90,7 +101,17 @@ func (q *Query) aliasQuery() string {
 	}
 
 	if len(q.OrderBy) > 0 {
-		query = query + orderByConstructor(q.OrderBy)
+		var offset int = 0
+		if q.Offset != nil {
+			offset = *q.Offset 
+		}
+
+		var limit int = 0
+		if q.Limit != nil {
+			limit = *q.Limit
+		}
+
+		query = query + orderByConstructor(q.OrderBy, limit, offset)
 	}
 
 	return query
@@ -117,7 +138,7 @@ func (q *Query) aliasTableQuery() string {
 func (q *Query) groupQuery() string {
 	var query string = "SELECT "
 
-	if q.Limit != nil && *q.Limit > 0 {
+	if q.Limit != nil && *q.Limit > 0 && len(q.OrderBy) == 0 {
 		query = query + fmt.Sprintf("TOP %d ", *q.Limit)
 	}
 
@@ -142,8 +163,18 @@ func (q *Query) groupQuery() string {
 	}
 
 	if len(q.OrderBy) > 0 {
-		query = query + orderByConstructor(q.OrderBy)
-	}
+		var offset int = 0
+		if q.Offset != nil {
+			offset = *q.Offset 
+		}
+
+		var limit int = 0
+		if q.Limit != nil {
+			limit = *q.Limit
+		}
+
+		query = query + orderByConstructor(q.OrderBy, limit, offset)
+	}	
 
 	return query
 }
@@ -385,7 +416,7 @@ type OrderByStatement struct {
 	FieldName string
 }
 
-func orderByConstructor(statements []*OrderByStatement) string {
+func orderByConstructor(statements []*OrderByStatement, offset int, limit int) string {
 	if len(statements) < 1 {
 		return ""
 	}
@@ -400,5 +431,7 @@ func orderByConstructor(statements []*OrderByStatement) string {
 		}
 		orderByArr = append(orderByArr, ob.FieldName+direction)
 	}
-	return (" ORDER BY " + strings.Join(orderByArr, ", "))
+
+	
+	return (" ORDER BY " + strings.Join(orderByArr, ", ") + fmt.Sprintf("OFFSET %d ROWS FETCH NEXT %d ROWS ONLY;", offset, *q.Limit))
 }
