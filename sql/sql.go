@@ -433,5 +433,5 @@ func orderByConstructor(statements []*OrderByStatement, offset int, limit int) s
 	}
 
 	
-	return (" ORDER BY " + strings.Join(orderByArr, ", ") + fmt.Sprintf("OFFSET %d ROWS FETCH NEXT %d ROWS ONLY;", offset, *q.Limit))
+	return (" ORDER BY " + strings.Join(orderByArr, ", ") + fmt.Sprintf("OFFSET %d ROWS FETCH NEXT %d ROWS ONLY;", offset, limit))
 }
