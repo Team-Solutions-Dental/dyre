@@ -74,7 +74,7 @@ func (q *Query) tableQuery() string {
 			limit = *q.Limit
 		}
 
-		query = query + orderByConstructor(q.OrderBy, limit, offset)
+		query = query + orderByConstructor(q.OrderBy, offset, limit)
 	}	
 
 	return query
@@ -111,7 +111,7 @@ func (q *Query) aliasQuery() string {
 			limit = *q.Limit
 		}
 
-		query = query + orderByConstructor(q.OrderBy, limit, offset)
+		query = query + orderByConstructor(q.OrderBy, offset, limit)
 	}
 
 	return query
@@ -173,7 +173,7 @@ func (q *Query) groupQuery() string {
 			limit = *q.Limit
 		}
 
-		query = query + orderByConstructor(q.OrderBy, limit, offset)
+		query = query + orderByConstructor(q.OrderBy, offset, limit)
 	}	
 
 	return query
