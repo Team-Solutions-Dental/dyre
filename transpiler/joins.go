@@ -50,6 +50,11 @@ func (ir *IR) LIMIT(input int) *IR {
 	return ir
 }
 
+func (ir *IR) OFFSET(input int) *IR {
+	ir.sql.Offset = &input
+	return ir
+}
+
 type joinType struct {
 	joinType string
 	parentIR *IR
