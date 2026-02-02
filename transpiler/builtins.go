@@ -100,6 +100,19 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		return &object.Expression{ExpressionType: objectType.DATE,
 			Value: fmt.Sprintf("DATEADD(%s, %s, %s)", interval.Value, num.String(), args[2])}
 	},
+	"datediff": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 3 {
+			return newError("wrong number of arguments. got=%d, want=3", len(args))
+		}
+
+		interval, ok := args[0].(*object.String)
+		if !ok {
+			return newError("Invalid Argument Type (Expect String). %s %s", args[0].Type(), args[0].String())
+		}
+
+		return &object.Expression{ExpressionType: objectType.INTEGER,
+			Value: fmt.Sprintf("DATEDIFF(%s, %s, %s)", interval.Value, args[1], args[2])}
+	},
 	"convert": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) < 2 {
 			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
