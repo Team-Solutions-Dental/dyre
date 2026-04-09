@@ -34,7 +34,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			Value: fmt.Sprintf("DISTINCT %s", args[0])}	
 	},
 	"iif": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
-		if len(args != 3) {
+		if len(args) != 3 {
 			return newError("wrong number of arguments got=%d, want=3", len(args))
 		}
 
