@@ -33,6 +33,18 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		return &object.Expression{ExpressionType: objectType.EXPRESSION,
 			Value: fmt.Sprintf("DISTINCT %s", args[0])}	
 	},
+	"iif": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args != 3) {
+			return newError("wrong number of arguments got=%d, want=3", len(args))
+		}
+
+		if args[0].type != objectType.BOOLEAN {
+			return newError("Invalid evaluative expression, got=%s, want=BOOLEAN", args[0].Type())
+		}
+		
+		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+			Value: fmt.Sprintf("IIF(%s, %s, %s)", args[0], args[1], args[2])}
+	},
 	//cast(expression, to)
 	"cast": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
