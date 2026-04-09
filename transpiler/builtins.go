@@ -38,7 +38,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("wrong number of arguments got=%d, want=3", len(args))
 		}
 
-		if args[0].type != objectType.BOOLEAN {
+		if args[0].Type() != objectType.BOOLEAN {
 			return newError("Invalid evaluative expression, got=%s, want=BOOLEAN", args[0].Type())
 		}
 		
