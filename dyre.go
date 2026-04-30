@@ -89,7 +89,7 @@ func (e *Endpoint) Fields() []string {
 	return e.ref.FieldNames
 }
 
-func (e *Endpoint) FullFields() map[string]Field {
+func (e *Endpoint) FullFields() map[string]endpoint.Field {
 	return e.ref.Fields
 }
 
