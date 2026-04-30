@@ -89,6 +89,10 @@ func (e *Endpoint) Fields() []string {
 	return e.ref.FieldNames
 }
 
+func (e *Endpoint) JSON() string {
+	return *e.ref.JSON()
+}
+
 func (e *Endpoint) Joins() []string {
 	var joins []string
 	for _, j := range e.ref.Joins {
