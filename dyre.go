@@ -89,8 +89,8 @@ func (e *Endpoint) Fields() []string {
 	return e.ref.FieldNames
 }
 
-func (e *Endpoint) JSON() string {
-	return e.ref.JSON()
+func (e *Endpoint) FullFields() string {
+	return e.ref.Fields
 }
 
 func (e *Endpoint) Joins() []string {
