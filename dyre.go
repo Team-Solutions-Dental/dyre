@@ -90,7 +90,7 @@ func (e *Endpoint) Fields() []string {
 }
 
 func (e *Endpoint) JSON() string {
-	return *e.ref.JSON()
+	return e.ref.JSON()
 }
 
 func (e *Endpoint) Joins() []string {
