@@ -209,7 +209,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		switch {
 		case column.Type() == objectType.STRING:
 			return &object.Expression{ExpressionType: objectType.BOOLEAN,
-				Value: fmt.Sprintf("(%s NOT LIKE %s)", column.String(), comparison.String())}
+				Value: fmt.Sprintf("(%s NOT LIKE %s OR %s IS NULL)", column.String(), comparison.String(), column.String())}
 		default:
 			return newError("Invalid Type. %s %s", column.Type(), column.String())
 		}
