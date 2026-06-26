@@ -45,6 +45,24 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		return &object.Expression{ExpressionType: objectType.EXPRESSION,
 			Value: fmt.Sprintf("IIF(%s, %s, %s)", args[0], args[1], args[2])}
 	},
+	//lag(expression, partition, order)
+	"lag": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 3 {
+			return newError("wrong number of arguments got=%d, want=3", len(args))
+		}
+		
+		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+			Value: fmt.Sprintf("LAG(%s) OVER (PARTITION BY %s ORDER BY %s)", args[0], args[1], args[2])}
+	},
+	//lead(expression, partition, order)
+	"lead": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 3 {
+			return newError("wrong number of arguments got=%d, want=3", len(args))
+		}
+
+		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+			Value: fmt.Sprintf("LEAD(%s) OVER (PARTITION BY %s ORDER BY %s)", args[0], args[1], args[2])}
+	},
 	//cast(expression, to)
 	"cast": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
