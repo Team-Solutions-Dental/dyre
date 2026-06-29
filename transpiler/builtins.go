@@ -51,7 +51,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("wrong number of arguments got=%d, want=3", len(args))
 		}
 		
-		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+		return &object.Expression{ExpressionType: objectType.EXPRESSION, HasNull: true,
 			Value: fmt.Sprintf("LAG(%s) OVER (PARTITION BY %s ORDER BY %s)", args[0], args[1], args[2])}
 	},
 	//lead(expression, partition, order)
@@ -60,7 +60,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("wrong number of arguments got=%d, want=3", len(args))
 		}
 
-		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+		return &object.Expression{ExpressionType: objectType.EXPRESSION, HasNull: true,
 			Value: fmt.Sprintf("LEAD(%s) OVER (PARTITION BY %s ORDER BY %s)", args[0], args[1], args[2])}
 	},
 	//cast(expression, to)
@@ -80,7 +80,7 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("Invalid cast to identity type, got=%s, want=STRING", args[1].Type())
 		}
 
-		return &object.Expression{ExpressionType: objectType.EXPRESSION,
+		return &object.Expression{ExpressionType: objectType.EXPRESSION, HasNull: true,
 			Value: fmt.Sprintf("CAST( %s AS %s )", expression, castTo.Value)}
 
 	},
