@@ -1,6 +1,8 @@
 package transpiler
 
 import (
+	"fmt"
+
 	"github.com/Team-Solutions-Dental/dyre/object"
 	"github.com/Team-Solutions-Dental/dyre/object/objectRef"
 	"github.com/Team-Solutions-Dental/dyre/object/objectType"
@@ -52,7 +54,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          expression.String(),
+			Value:          fmt.Sprintf("COUNT(%s)", expression.String()),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -94,7 +96,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          expression.String(),
+			Value:          fmt.Sprintf("SUM(%s)", expression.String()),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -135,7 +137,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          expression.String(),
+			Value:          fmt.Sprintf("AVG(%s)", expression.String()),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -176,7 +178,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          expression.String(),
+			Value:          fmt.Sprintf("MIN(%s)", expression.String()),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
@@ -217,7 +219,7 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		out := &object.Expression{
 			ExpressionType: objectType.INTEGER,
-			Value:          expression.String(),
+			Value:          fmt.Sprintf("MAX(%s)", expression.String()),
 		}
 
 		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}

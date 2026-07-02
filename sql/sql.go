@@ -329,9 +329,9 @@ func (sge *SelectGroupExpression) Name() string                { return *sge.Ali
 func (sge *SelectGroupExpression) Nullable() bool              { return sge.HasNull }
 func (sge *SelectGroupExpression) Statement() string {
 	if sge.Query.BracketedColumns {
-		return fmt.Sprintf("%s(%s) AS [%s]", *sge.Fn, sge.Expression.String(), *sge.Alias)
+		return fmt.Sprintf("%s AS [%s]", sge.Expression.String(), *sge.Alias)
 	}
-	return fmt.Sprintf("%s(%s) AS %s", *sge.Fn, sge.Expression.String(), *sge.Alias)
+	return fmt.Sprintf("%s AS %s", sge.Expression.String(), *sge.Alias)
 }
 
 type JoinStatement struct {
@@ -397,7 +397,7 @@ func havingConstructor(statements []string) string {
 	}
 	where = fmt.Sprintf(" HAVING %s", statements[0])
 	for i := 1; i < len(statements); i++ {
-		where = where + " AND " + statements[i]
+		where = where + " AND" + statements[i]
 	}
 	return where
 }
@@ -432,6 +432,9 @@ func orderByConstructor(statements []*OrderByStatement, offset int, limit int) s
 		orderByArr = append(orderByArr, ob.FieldName+direction)
 	}
 
-	
-	return (" ORDER BY " + strings.Join(orderByArr, ", ") + fmt.Sprintf(" OFFSET %d ROWS FETCH NEXT %d ROWS ONLY;", offset, limit))
+	orderBy := " ORDER BY " + strings.Join(orderByArr, ", ")
+	if limit > 0 {
+		orderBy += fmt.Sprintf(" OFFSET %d ROWS FETCH NEXT %d ROWS ONLY;", offset, limit)
+	}
+	return (orderBy) 
 }
