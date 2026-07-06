@@ -79,6 +79,7 @@ var keywords = map[string]TokenType{
 	"SUM":   GROUP,
 	"MIN":   GROUP,
 	"MAX":   GROUP,
+	"STRING_AGG": GROUP,
 }
 
 func LookupIdent(ident string) TokenType {
