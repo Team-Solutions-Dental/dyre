@@ -84,6 +84,62 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			Value: fmt.Sprintf("CAST( %s AS %s )", expression, castTo.Value)}
 
 	},
+	"convert": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) < 2 {
+			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
+		}
+
+		if len(args) > 3 {
+			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
+		}
+
+		convert, ok := args[0].(*object.String)
+		if !ok {
+			return newError("Invalid Argument Type. %s %s", args[0].Type(), args[0].String())
+		}
+
+		if len(args) == 2 {
+			return &object.Expression{ExpressionType: objectType.DATE,
+				Value: fmt.Sprintf("CONVERT(%s, %s)", convert.Value, args[1])}
+		}
+
+		if len(args) == 3 {
+			return &object.Expression{ExpressionType: objectType.DATE,
+				Value: fmt.Sprintf("CONVERT(%s, %s, %s)", convert.Value, args[1], args[2])}
+		}
+
+		return nil
+	},
+	"date": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("wrong number of arguments. got=%d, want=1", len(args))
+		}
+
+		arg := args[0]
+
+		switch {
+		case arg.Type() == objectType.STRING:
+			return &object.Expression{ExpressionType: objectType.DATE,
+				Value: fmt.Sprintf("CONVERT(date, %s, 23)", args[0])}
+		default:
+			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
+		}
+	},
+	"datetime": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("wrong number of arguments. got=%d, want=1", len(args))
+		}
+
+		arg := args[0]
+
+		switch {
+		case arg.Type() == objectType.STRING:
+			return &object.Expression{ExpressionType: objectType.DATETIME,
+				Value: fmt.Sprintf("CONVERT(date, %s, 127)", args[0])}
+		default:
+			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
+		}
+	},
 	"timezone": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))
@@ -143,63 +199,6 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 		return &object.Expression{ExpressionType: objectType.INTEGER,
 			Value: fmt.Sprintf("DATEDIFF(%s, %s, %s)", interval.Value, args[1], args[2])}
 	},
-	"convert": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
-		if len(args) < 2 {
-			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
-		}
-
-		if len(args) > 3 {
-			return newError("wrong number of arguments. got=%d, want=2-3", len(args))
-		}
-
-		convert, ok := args[0].(*object.String)
-		if !ok {
-			return newError("Invalid Argument Type. %s %s", args[0].Type(), args[0].String())
-		}
-
-		if len(args) == 2 {
-			return &object.Expression{ExpressionType: objectType.DATE,
-				Value: fmt.Sprintf("CONVERT(%s, %s)", convert.Value, args[1])}
-		}
-
-		if len(args) == 3 {
-			return &object.Expression{ExpressionType: objectType.DATE,
-				Value: fmt.Sprintf("CONVERT(%s, %s, %s)", convert.Value, args[1], args[2])}
-		}
-
-		return nil
-	},
-	"date": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("wrong number of arguments. got=%d, want=1", len(args))
-		}
-
-		arg := args[0]
-
-		switch {
-		case arg.Type() == objectType.STRING:
-			return &object.Expression{ExpressionType: objectType.DATE,
-				Value: fmt.Sprintf("CONVERT(date, %s, 23)", args[0])}
-		default:
-			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
-		}
-	},
-	"datetime": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("wrong number of arguments. got=%d, want=1", len(args))
-		}
-
-		arg := args[0]
-
-		switch {
-		case arg.Type() == objectType.STRING:
-			return &object.Expression{ExpressionType: objectType.DATETIME,
-				Value: fmt.Sprintf("CONVERT(date, %s, 127)", args[0])}
-		default:
-			return newError("Invalid Type. %s %s", arg.Type(), arg.String())
-		}
-	},
-	//
 	"like": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 2 {
 			return newError("wrong number of arguments. got=%d, want=2", len(args))

@@ -230,6 +230,53 @@ var groupFunctions = map[string]func(ir *IR, local *objectRef.LocalReferences, a
 
 		return nil
 	},
+	// STRING_AGG(name: string, input: expression, separator: string)
+	"STRING_AGG": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
+		fn := "STRING_AGG"
+		if len(args) != 3 {
+			return newError("wrong number of arguments. got=%d, want=3", len(args))
+		}
+
+		name := args[0]
+		expression := args[1]
+		separator := args[2]
+
+		if name.Type() != objectType.STRING {
+			return newError("Invalid name identity type, got=%s, want=STRING", name.Type())
+		}
+
+		name_obj, ok := name.(*object.String)
+		if !ok {
+			return newError("Invalid name identity type convertion, got=%s, want=STRING", name.Type())
+		}
+
+		if separator.Type() != objectType.STRING {
+			return newError("Invalid separator identity type, got=%s, want=STRING", separator.Type())
+		}
+
+		selectStatementLoc := ir.sql.SelectStatementLocation(name_obj.Value)
+		if selectStatementLoc >= 0 {
+			return newError("Field '%s' name already defined ", name_obj.Value)
+		}
+
+		if isError(expression) {
+			return expression
+		}
+
+		out := &object.Expression{
+			ExpressionType: objectType.INTEGER,
+			Value:          fmt.Sprintf("STRING_AGG(%s, %s)", expression.String(), separator.String()),
+		}
+
+		expr := &sql.SelectGroupExpression{Query: ir.sql, Fn: &fn, Alias: &name_obj.Value, Expression: out}
+		local.Set(expr.Statement(), objectRef.GROUP)
+
+		ir.currentSelectStatement = expr
+		ir.sql.SelectStatements = append(ir.sql.SelectStatements, expr)
+
+		return nil
+	},
+
 }
 
 func groupColumn(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {

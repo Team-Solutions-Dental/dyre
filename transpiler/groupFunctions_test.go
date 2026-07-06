@@ -10,13 +10,14 @@ func TestGroupFunctions(t *testing.T) {
 		expected string
 	}{
 		{"GROUP('StrN'):", "SELECT Types.[StrN] FROM dbo.Types GROUP BY Types.[StrN]"},                                                                                                          // GROUP Function
-		{"GROUP('year', datepart('year', @('DateTimeN'))):", "SELECT DATEPART(year, Types.[DateTimeN]) AS [year] FROM dbo.Types GROUP BY DATEPART(year, Types.[DateTimeN])"},                  // GROUP Function
+		{"GROUP('year', datepart('year', @('DateTimeN'))):", "SELECT DATEPART(year, Types.[DateTimeN]) AS [year] FROM dbo.Types GROUP BY DATEPART(year, Types.[DateTimeN])"},                    // GROUP Function
 		{"GROUP('StrN'):@('Int')>5;", "SELECT Types.[StrN] FROM dbo.Types WHERE (Types.[Int] > 5) GROUP BY Types.[StrN]"},                                                                       // WHERE Evaluation
 		{"GROUP('StrN'):COUNT('countedBool', @('Bool')):", "SELECT Types.[StrN], COUNT(Types.[Bool]) AS [countedBool] FROM dbo.Types GROUP BY Types.[StrN]"},                                    // COUNT Function
 		{"GROUP('StrN'):SUM('sumInt', @('Int')):", "SELECT Types.[StrN], SUM(Types.[Int]) AS [sumInt] FROM dbo.Types GROUP BY Types.[StrN]"},                                                    // SUM Function
 		{"GROUP('StrN'):AVG('avgInt', @('Int')):", "SELECT Types.[StrN], AVG(Types.[Int]) AS [avgInt] FROM dbo.Types GROUP BY Types.[StrN]"},                                                    // AVG Function
 		{"GROUP('StrN'):MIN('minInt', @('Int')):", "SELECT Types.[StrN], MIN(Types.[Int]) AS [minInt] FROM dbo.Types GROUP BY Types.[StrN]"},                                                    // MIN Function
 		{"GROUP('StrN'):MAX('maxInt', @('Int')):", "SELECT Types.[StrN], MAX(Types.[Int]) AS [maxInt] FROM dbo.Types GROUP BY Types.[StrN]"},                                                    // MAX Function
+		{"GROUP('Int'):STRING_AGG('strList', @('StrN'), ', '):", "SELECT Types.[Int], STRING_AGG(Types.[StrN], ', ') AS [strList] FROM dbo.Types GROUP BY Types.[Int]"},                                                    // STRING_AGG Function
 		{"GROUP('StrN'): != NULL;", "SELECT Types.[StrN] FROM dbo.Types GROUP BY Types.[StrN] HAVING (Types.[StrN] IS NOT NULL)"},                                                               // Select Field HAVING
 		{"GROUP('StrN'):MAX('maxInt', (@('Int') * 10)): > 5;", "SELECT Types.[StrN], MAX((Types.[Int] * 10)) AS [maxInt] FROM dbo.Types GROUP BY Types.[StrN] HAVING (MAX((Types.[Int] * 10)) > 5)"}, // MAX Function
 	}
