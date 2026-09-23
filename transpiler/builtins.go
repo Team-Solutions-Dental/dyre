@@ -178,13 +178,12 @@ var builtins = map[string]func(ir *IR, local *objectRef.LocalReferences, args ..
 			return newError("Invalid Argument Type (Expect String). %s %s", args[0].Type(), args[0].String())
 		}
 
-		num, ok := args[1].(*object.Integer)
-		if !ok {
+		if args[1].Type() != objectType.INTEGER {
 			return newError("Invalid Argument Type (Expect Int). %s %s", args[1].Type(), args[1].String())
 		}
 
 		return &object.Expression{ExpressionType: objectType.DATE,
-			Value: fmt.Sprintf("DATEADD(%s, %s, %s)", interval.Value, num.String(), args[2])}
+			Value: fmt.Sprintf("DATEADD(%s, %s, %s)", interval.Value, args[1].String(), args[2])}
 	},
 	"datediff": func(ir *IR, local *objectRef.LocalReferences, args ...object.Object) object.Object {
 		if len(args) != 3 {

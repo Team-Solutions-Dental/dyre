@@ -37,6 +37,8 @@ func TestBuiltinFunctions(t *testing.T) {
 			"SELECT Types.[StrN] FROM dbo.Types WHERE (Types.[StrN] LIKE '%hello%')"}, // Like function
 		{"StrN: unlike(@, '%hello%');",
 			"SELECT Types.[StrN] FROM dbo.Types WHERE (Types.[StrN] NOT LIKE '%hello%' OR Types.[StrN] IS NULL)"}, // Like inversion
+		{"AS('onemonthago', dateadd('month', -1, @('DateTimeN'))):",
+			"SELECT (DATEADD(month, -1, Types.[DateTimeN])) AS [onemonthago] FROM dbo.Types"}, // Negative dateadd
 	}
 
 	for _, tt := range tests {
